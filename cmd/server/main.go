@@ -9,8 +9,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	
-	"go-dev-mcp/internal/config"
-	"go-dev-mcp/internal/tools"
+	"github.com/MrFixit96/go-dev-mcp/internal/config"
+	"github.com/MrFixit96/go-dev-mcp/internal/tools"
 )
 
 // main is the entry point for the Go Development MCP Server.
@@ -25,12 +25,10 @@ func main() {
 		cfg = config.DefaultConfig()
 	}
 	
-	// Create MCP server
+	// Create MCP server - use the simplest constructor for v0.19.0
 	s := server.NewMCPServer(
 		"Go Development Tools",
 		cfg.Version,
-		server.WithToolCapabilities(true),
-		server.WithRecovery(), // Add panic recovery for stability
 	)
 	
 	// Handle signals for graceful shutdown
@@ -39,7 +37,6 @@ func main() {
 	go func() {
 		<-sigCh
 		log.Println("Shutting down...")
-		// We would use ctx.Done() here in a more complex implementation
 		os.Exit(0)
 	}()
 	
@@ -55,7 +52,7 @@ func main() {
 
 // registerTools registers all available Go development tools with the MCP server.
 func registerTools(s *server.MCPServer) {
-	// Register go_build tool
+	// Register go_build tool - simplified for v0.19.0
 	buildTool := mcp.NewTool("go_build", 
 		mcp.WithDescription("Compile Go code"),
 		mcp.WithString("code", mcp.Required(), mcp.Description("Go source code")),
@@ -76,11 +73,12 @@ func registerTools(s *server.MCPServer) {
 	)
 	s.AddTool(testTool, tools.ExecuteGoTestTool)
 	
-	// Register go_run tool
+	// Register go_run tool - replace WithArray with WithObject
 	runTool := mcp.NewTool("go_run",
 		mcp.WithDescription("Compile and run Go code"),
 		mcp.WithString("code", mcp.Required(), mcp.Description("Go source code")),
-		mcp.WithArray("args", mcp.Description("Command-line arguments")),
+		// Replace WithArray with WithObject which should be more basic and available in v0.19.0
+		mcp.WithObject("args", mcp.Description("Command-line arguments")),
 		mcp.WithNumber("timeoutSecs", mcp.Description("Timeout in seconds"), mcp.DefaultNumber(30)),
 	)
 	s.AddTool(runTool, tools.ExecuteGoRunTool)
