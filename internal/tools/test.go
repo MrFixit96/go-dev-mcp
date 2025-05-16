@@ -13,30 +13,16 @@ import (
 
 // ExecuteGoTestTool handles the go_test tool execution
 func ExecuteGoTestTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Extract parameters
-	code := ""
-	if c, ok := req.Params.Arguments["code"].(string); ok {
-		code = c
-	}
+	// Extract parameters using helper functions
+	code := mcp.ParseString(req, "code", "")
+	testCode := mcp.ParseString(req, "testCode", "")
+	testPattern := mcp.ParseString(req, "testPattern", "")
+	verbose := mcp.ParseBoolean(req, "verbose", false)
+	coverage := mcp.ParseBoolean(req, "coverage", false)
 
-	testCode := ""
-	if tc, ok := req.Params.Arguments["testCode"].(string); ok {
-		testCode = tc
-	}
-
-	testPattern := ""
-	if tp, ok := req.Params.Arguments["testPattern"].(string); ok {
-		testPattern = tp
-	}
-
-	verbose := false
-	if v, ok := req.Params.Arguments["verbose"].(bool); ok {
-		verbose = v
-	}
-
-	coverage := false
-	if c, ok := req.Params.Arguments["coverage"].(bool); ok {
-		coverage = c
+	// Validate parameters
+	if code == "" && testCode == "" {
+		return mcp.NewToolResultError("Either 'code' or 'testCode' must be provided"), nil
 	}
 
 	// Create temporary directory for the operation
@@ -63,20 +49,9 @@ func ExecuteGoTestTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 
 	// Write test code to file
 	testFile := filepath.Join(tmpDir, "main_test.go")
-	if testCode == "" {
-		// If no test code provided but main code exists, try to create a simple test
-		if code != "" {
-			testCode = fmt.Sprintf(`package main
-
-import "testing"
-
-func TestMain(t *testing.T) {
-	t.Log("No specific tests provided. This is a placeholder test.")
-	// Add your test assertions here
-}`)
-		} else {
-			return mcp.NewToolResultError("No code or test code provided"), nil
-		}
+	if testCode == "" && code != "" {
+		// If no test code provided but main code exists, create a simple test
+		testCode = generateSimpleTest()
 	}
 	
 	if err := os.WriteFile(testFile, []byte(testCode), 0644); err != nil {
@@ -105,34 +80,60 @@ func TestMain(t *testing.T) {
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
 	}
 
-	// Parse test output to extract coverage information
+	// Create structured response with proper error handling
+	if result.Successful {
+		return formatTestSuccess(result, coverage), nil
+	} else {
+		return formatTestError(result), nil
+	}
+}
+
+// generateSimpleTest creates a simple test case when none is provided
+func generateSimpleTest() string {
+	return `package main
+
+import "testing"
+
+func TestMain(t *testing.T) {
+	t.Log("No specific tests provided. This is a placeholder test.")
+	// Add your test assertions here
+}`
+}
+
+// formatTestSuccess creates a structured success response for tests
+func formatTestSuccess(result *ExecutionResult, withCoverage bool) *mcp.CallToolResult {
+	// Parse test output to extract coverage and test statistics
 	coverageInfo := ""
-	if coverage && result.Successful {
+	if withCoverage && result.Successful {
 		coverageInfo = extractCoverageInfo(result.Stdout)
 	}
 
-	var message string
-	if result.Successful {
-		message = "Tests passed"
-	} else {
-		message = "Tests failed"
-	}
+	testStats := parseTestStats(result.Stdout)
+	
+	return mcp.NewToolResultText(fmt.Sprintf(`{
+		"success": true,
+		"message": "Tests passed",
+		"output": "%s",
+		"duration": "%s",
+		"coverage": "%s",
+		"testStats": %s
+	}`, result.Stdout, result.Duration.String(), coverageInfo, testStats))
+}
 
-	responseContent := fmt.Sprintf(`{
-		"success": %t,
-		"message": "%s",
-		"stdout": "%s",
+// formatTestError creates a structured error response for tests
+func formatTestError(result *ExecutionResult) *mcp.CallToolResult {
+	// Parse test errors for more context
+	errorDetails := parseTestErrors(result.Stdout, result.Stderr)
+	
+	return mcp.NewToolResultError(fmt.Sprintf(`{
+		"success": false,
+		"message": "Tests failed",
+		"output": "%s",
 		"stderr": "%s",
 		"exitCode": %d,
 		"duration": "%s",
-		"coverage": "%s"
-	}`, result.Successful, message, result.Stdout, result.Stderr, result.ExitCode, result.Duration.String(), coverageInfo)
-
-	if result.Successful {
-		return mcp.NewToolResultText(responseContent), nil
-	} else {
-		return mcp.NewToolResultError(responseContent), nil
-	}
+		"errorDetails": %s
+	}`, result.Stdout, result.Stderr, result.ExitCode, result.Duration.String(), errorDetails))
 }
 
 // extractCoverageInfo extracts coverage information from test output
@@ -144,4 +145,18 @@ func extractCoverageInfo(output string) string {
 		}
 	}
 	return "Coverage information not available"
+}
+
+// parseTestStats extracts test statistics from output
+func parseTestStats(output string) string {
+	// In a real implementation, this would parse test output 
+	// for test count, run time, etc. into structured JSON
+	return `{"count": "unknown", "passed": "unknown", "failed": "unknown"}`
+}
+
+// parseTestErrors extracts structured information from test failures
+func parseTestErrors(stdout, stderr string) string {
+	// In a real implementation, this would parse test failure output
+	// into structured JSON with file, line, and error details
+	return fmt.Sprintf(`"%s"`, stderr)
 }

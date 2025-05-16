@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -25,10 +26,26 @@ func main() {
 		cfg = config.DefaultConfig()
 	}
 	
-	// Create MCP server - use the simplest constructor for v0.19.0
+	// Create hooks for enhanced server observability
+	hooks := &server.Hooks{}
+	hooks.AddBeforeAny(func(ctx context.Context, id any, method mcp.MCPMethod, message any) {
+		log.Printf("Request received: %s, ID: %v", method, id)
+	})
+	hooks.AddOnSuccess(func(ctx context.Context, id any, method mcp.MCPMethod, message any, result any) {
+		log.Printf("Request successful: %s, ID: %v", method, id)
+	})
+	hooks.AddOnError(func(ctx context.Context, id any, method mcp.MCPMethod, message any, err error) {
+		log.Printf("Error processing request: %s, ID: %v, Error: %v", method, id, err)
+	})
+	
+	// Create MCP server with enhanced configuration
 	s := server.NewMCPServer(
 		"Go Development Tools",
 		cfg.Version,
+		server.WithToolCapabilities(true),
+		server.WithRecovery(),
+		server.WithLogging(),
+		server.WithHooks(hooks),
 	)
 	
 	// Handle signals for graceful shutdown
@@ -52,7 +69,7 @@ func main() {
 
 // registerTools registers all available Go development tools with the MCP server.
 func registerTools(s *server.MCPServer) {
-	// Register go_build tool - simplified for v0.19.0
+	// Register go_build tool - simplified for v0.9.0
 	buildTool := mcp.NewTool("go_build", 
 		mcp.WithDescription("Compile Go code"),
 		mcp.WithString("code", mcp.Required(), mcp.Description("Go source code")),
@@ -77,7 +94,7 @@ func registerTools(s *server.MCPServer) {
 	runTool := mcp.NewTool("go_run",
 		mcp.WithDescription("Compile and run Go code"),
 		mcp.WithString("code", mcp.Required(), mcp.Description("Go source code")),
-		// Replace WithArray with WithObject which should be more basic and available in v0.19.0
+		// Replace WithArray with WithObject which should be more basic and available in v0.9.0
 		mcp.WithObject("args", mcp.Description("Command-line arguments")),
 		mcp.WithNumber("timeoutSecs", mcp.Description("Timeout in seconds"), mcp.DefaultNumber(30)),
 	)
