@@ -1,0 +1,35 @@
+# Created using wingetcreate 1.5.2.0
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.5.0.schema.json
+
+PackageIdentifier: MrFixit96.GoDevMCP
+PackageVersion: 1.0.0
+PackageLocale: en-US
+Publisher: James Anderton
+PackageName: Go Development MCP Server
+PackageUrl: https://github.com/MrFixit96/go-dev-mcp
+License: MIT
+LicenseUrl: https://github.com/MrFixit96/go-dev-mcp/blob/main/LICENSE
+ShortDescription: A Golang MCP server that enables Claude Desktop and other AI tools to automate Go development workflows
+Description: |
+  The Go Development MCP Server is a comprehensive solution for integrating Go development
+  workflows with AI assistants like Claude Desktop. It enables AI assistants to compile,
+  test, run, and analyze Go code directly through the Model Context Protocol (MCP).
+  
+  Features include:
+  - Go Build: Compile Go code and receive detailed feedback
+  - Go Test: Run tests on Go code with support for coverage analysis
+  - Go Run: Compile and execute Go programs with command-line arguments
+  - Go Mod: Manage Go module dependencies
+  - Go Format: Format Go code according to standard conventions
+  - Go Analyze: Analyze Go code for issues using static analysis tools
+Moniker: go-dev-mcp
+Tags:
+- ai
+- claude
+- development
+- go
+- golang
+- mcp
+- model-context-protocol
+ManifestType: defaultLocale
+ManifestVersion: 1.5.0
