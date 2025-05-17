@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -13,64 +11,70 @@ import (
 
 // ExecuteGoBuildTool handles the go_build tool execution
 func ExecuteGoBuildTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Extract parameters using helper functions
-	code := mcp.ParseString(req, "code", "")
-	if code == "" {
-		return mcp.NewToolResultError("No source code provided. Parameter 'code' is required"), nil
+	// Resolve input
+	input, err := ResolveInput(req)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
 	}
-
+	
+	// Extract parameters
 	outputPath := mcp.ParseString(req, "outputPath", "")
 	buildTags := mcp.ParseString(req, "buildTags", "")
-	mainFile := mcp.ParseString(req, "mainFile", "main.go")
-
-	// Create temporary directory for the operation
-	tmpDir, err := os.MkdirTemp("", "go-build-*")
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create temp directory: %v", err)), nil
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Write code to temporary file
-	sourceFile := filepath.Join(tmpDir, mainFile)
-	if err := os.WriteFile(sourceFile, []byte(code), 0644); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write source code: %v", err)), nil
-	}
-
-	// Prepare build command
-	cmd := exec.Command("go", "build")
+	
+	// Prepare build args
+	args := []string{"build"}
 	if buildTags != "" {
-		cmd.Args = append(cmd.Args, "-tags", buildTags)
+		args = append(args, "-tags", buildTags)
 	}
 	if outputPath != "" {
-		cmd.Args = append(cmd.Args, "-o", outputPath)
-	} else {
-		outputPath = filepath.Join(tmpDir, "output")
-		cmd.Args = append(cmd.Args, "-o", outputPath)
+		args = append(args, "-o", outputPath)
+	} else if input.Source == SourceCode {
+		// Only set default output for code input
+		outputPath = "output"
+		args = append(args, "-o", outputPath)
 	}
-	cmd.Args = append(cmd.Args, sourceFile)
-	cmd.Dir = tmpDir
-
-	// Execute command
-	result, err := execute(cmd)
+	
+	// For code execution, add the main file
+	if input.Source == SourceCode {
+		args = append(args, input.MainFile)
+	} else {
+		// For project execution, add ./... to build all packages
+		args = append(args, "./...")
+	}
+	
+	// Execute using appropriate strategy
+	strategy := GetExecutionStrategy(input)
+	result, err := strategy.Execute(ctx, input, args)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
 	}
-
+	
 	// Format response with structured error handling
 	if result.Successful {
-		return formatBuildSuccess(result, outputPath), nil
+		return formatBuildSuccess(result, outputPath, input), nil
 	} else {
 		return formatBuildError(result), nil
 	}
 }
 
 // formatBuildSuccess creates a structured success response
-func formatBuildSuccess(result *ExecutionResult, outputPath string) *mcp.CallToolResult {
+func formatBuildSuccess(result *ExecutionResult, outputPath string, input InputContext) *mcp.CallToolResult {
+	// Determine the full output path
+	var fullOutputPath string
+	if filepath.IsAbs(outputPath) {
+		fullOutputPath = outputPath
+	} else if input.Source == SourceProjectPath {
+		fullOutputPath = filepath.Join(input.ProjectPath, outputPath)
+	} else {
+		fullOutputPath = outputPath + " (in temporary directory)"
+	}
+
 	response := map[string]interface{}{
 		"success":    true,
 		"message":    "Compilation successful",
-		"outputPath": outputPath,
+		"outputPath": fullOutputPath,
 		"duration":   result.Duration.String(),
+		"source":     input.Source,
 	}
 
 	// Add natural language metadata
