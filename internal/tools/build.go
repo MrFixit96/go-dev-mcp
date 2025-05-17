@@ -16,11 +16,11 @@ func ExecuteGoBuildTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-	
+
 	// Extract parameters
 	outputPath := mcp.ParseString(req, "outputPath", "")
 	buildTags := mcp.ParseString(req, "buildTags", "")
-	
+
 	// Prepare build args
 	args := []string{"build"}
 	if buildTags != "" {
@@ -33,7 +33,7 @@ func ExecuteGoBuildTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		outputPath = "output"
 		args = append(args, "-o", outputPath)
 	}
-	
+
 	// For code execution, add the main file
 	if input.Source == SourceCode {
 		args = append(args, input.MainFile)
@@ -41,14 +41,14 @@ func ExecuteGoBuildTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		// For project execution, add ./... to build all packages
 		args = append(args, "./...")
 	}
-	
+
 	// Execute using appropriate strategy
-	strategy := GetExecutionStrategy(input)
+	strategy := GetExecutionStrategy(input, args...)
 	result, err := strategy.Execute(ctx, input, args)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
 	}
-	
+
 	// Format response with structured error handling
 	if result.Successful {
 		return formatBuildSuccess(result, outputPath, input), nil

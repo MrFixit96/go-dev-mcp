@@ -19,7 +19,7 @@ type ExecutionResult struct {
 	ExitCode   int
 	Duration   time.Duration
 	Successful bool
-	Command    string
+	Command    string // Command that was executed
 }
 
 // NLMetadata represents natural language metadata for tools
@@ -33,7 +33,7 @@ var ToolNLMetadata = map[string]NLMetadata{
 	"go_build": {
 		Aliases: []string{
 			"compile", "build", "create executable", "generate binary",
-			"make binary", "construct program", "prepare executable", 
+			"make binary", "construct program", "prepare executable",
 			"generate program", "assemble code", "create program",
 			"make executable", "generate exe", "turn into binary",
 			"convert to executable", "transform into program",
@@ -75,7 +75,7 @@ var ToolNLMetadata = map[string]NLMetadata{
 	"go_run": {
 		Aliases: []string{
 			"run", "execute", "start", "launch", "run code", "execute code",
-			"run program", "start program", "launch application", "start application", 
+			"run program", "start program", "launch application", "start application",
 			"execute program", "run application", "execute application", "invoke program",
 			"run this", "execute this",
 		},
@@ -255,12 +255,4 @@ func FormatCommandResult(result *ExecutionResult, responseType string) *mcp.Call
 	} else {
 		return mcp.NewToolResultError(string(jsonBytes))
 	}
-}
-
-// AddNLMetadata adds natural language metadata to a response map
-func AddNLMetadata(response map[string]interface{}, toolName string) map[string]interface{} {
-	if metadata, exists := ToolNLMetadata[toolName]; exists {
-		response["nlMetadata"] = metadata
-	}
-	return response
 }

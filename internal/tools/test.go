@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -34,12 +33,11 @@ func ExecuteGoTestTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	if testPattern != "" {
 		args = append(args, "-run", testPattern)
 	}
-	
+
 	// Always add ./... to run all tests in the directory
 	args = append(args, "./...")
-
 	// Execute using appropriate strategy
-	strategy := GetExecutionStrategy(input)
+	strategy := GetExecutionStrategy(input, args...)
 	result, err := strategy.Execute(ctx, input, args)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil

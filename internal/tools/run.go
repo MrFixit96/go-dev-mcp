@@ -16,7 +16,7 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-	
+
 	// Get args if provided
 	var cmdArgs []string
 	if argsObj, ok := req.Params.Arguments["args"].(map[string]interface{}); ok {
@@ -40,32 +40,31 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	if timeout, ok := req.Params.Arguments["timeoutSecs"].(float64); ok && timeout > 0 {
 		timeoutSecs = timeout
 	}
-	
+
 	// Create execution context with timeout
 	execCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 	defer cancel()
-	
+
 	// Prepare run args
 	args := []string{"run"}
-	
+
 	if input.Source == SourceCode {
 		args = append(args, input.MainFile)
 	} else {
 		args = append(args, "./...")
 	}
-	
+
 	// Add command-line arguments
 	args = append(args, cmdArgs...)
-	
 	// Execute using appropriate strategy
-	strategy := GetExecutionStrategy(input)
+	strategy := GetExecutionStrategy(input, args...)
 	result, err := strategy.Execute(execCtx, input, args)
-	
+
 	// Check for timeout
 	if execCtx.Err() == context.DeadlineExceeded {
 		return mcp.NewToolResultError(fmt.Sprintf("Program execution timed out after %.0f seconds", timeoutSecs)), nil
 	}
-	
+
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
 	}
