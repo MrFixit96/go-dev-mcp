@@ -164,14 +164,19 @@ func calculateTokenOverlap(tokens1, tokens2 []string) float64 {
 		return 0.0
 	}
 	
-	// Count matches
-	matches := 0
+	// Create a map for tokens1
+	tokenMap := make(map[string]bool)
 	for _, t1 := range tokens1 {
-		for _, t2 := range tokens2 {
-			if t1 == t2 && len(t1) > 2 { // Only count meaningful words (>2 chars)
-				matches++
-				break
-			}
+		if len(t1) > 2 { // Only consider meaningful words (>2 chars)
+			tokenMap[t1] = true
+		}
+	}
+	
+	// Count matches in tokens2
+	matches := 0
+	for _, t2 := range tokens2 {
+		if len(t2) > 2 && tokenMap[t2] {
+			matches++
 		}
 	}
 	
