@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,26 +13,15 @@ import (
 
 // ExecuteGoBuildTool handles the go_build tool execution
 func ExecuteGoBuildTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Extract parameters
-	code, ok := req.Params.Arguments["code"].(string)
-	if !ok {
-		return mcp.NewToolResultError("code must be a string"), nil
+	// Extract parameters using helper functions
+	code := mcp.ParseString(req, "code", "")
+	if code == "" {
+		return mcp.NewToolResultError("No source code provided. Parameter 'code' is required"), nil
 	}
 
-	outputPath := ""
-	if path, ok := req.Params.Arguments["outputPath"].(string); ok {
-		outputPath = path
-	}
-
-	buildTags := ""
-	if tags, ok := req.Params.Arguments["buildTags"].(string); ok {
-		buildTags = tags
-	}
-
-	mainFile := "main.go"
-	if file, ok := req.Params.Arguments["mainFile"].(string); ok && file != "" {
-		mainFile = file
-	}
+	outputPath := mcp.ParseString(req, "outputPath", "")
+	buildTags := mcp.ParseString(req, "buildTags", "")
+	mainFile := mcp.ParseString(req, "mainFile", "main.go")
 
 	// Create temporary directory for the operation
 	tmpDir, err := os.MkdirTemp("", "go-build-*")
@@ -66,25 +56,63 @@ func ExecuteGoBuildTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
 	}
 
-	var message string
+	// Format response with structured error handling
 	if result.Successful {
-		message = "Compilation successful"
+		return formatBuildSuccess(result, outputPath), nil
 	} else {
-		message = "Compilation failed"
+		return formatBuildError(result), nil
+	}
+}
+
+// formatBuildSuccess creates a structured success response
+func formatBuildSuccess(result *ExecutionResult, outputPath string) *mcp.CallToolResult {
+	response := map[string]interface{}{
+		"success":    true,
+		"message":    "Compilation successful",
+		"outputPath": outputPath,
+		"duration":   result.Duration.String(),
 	}
 
-	responseContent := fmt.Sprintf(`{
-		"success": %t,
-		"message": "%s",
-		"stdout": "%s",
-		"stderr": "%s",
-		"exitCode": %d,
-		"duration": "%s"
-	}`, result.Successful, message, result.Stdout, result.Stderr, result.ExitCode, result.Duration.String())
+	// Add natural language metadata
+	AddNLMetadata(response, "go_build")
 
-	if result.Successful {
-		return mcp.NewToolResultText(responseContent), nil
-	} else {
-		return mcp.NewToolResultError(responseContent), nil
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err))
 	}
+
+	return mcp.NewToolResultText(string(jsonBytes))
+}
+
+// formatBuildError creates a structured error response
+func formatBuildError(result *ExecutionResult) *mcp.CallToolResult {
+	// Parse Go build errors for more context
+	errorDetails := parseGoBuildErrors(result.Stderr)
+
+	response := map[string]interface{}{
+		"success":      false,
+		"message":      "Compilation failed",
+		"stderr":       result.Stderr,
+		"exitCode":     result.ExitCode,
+		"duration":     result.Duration.String(),
+		"errorDetails": errorDetails,
+	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_build")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err))
+	}
+
+	return mcp.NewToolResultError(string(jsonBytes))
+}
+
+// parseGoBuildErrors extracts meaningful error information from Go build output
+func parseGoBuildErrors(stderr string) string {
+	// In a real implementation, this would parse the error output
+	// and structure it by file, line, error type, etc.
+	// For now, we're just returning the raw stderr
+	return stderr
 }
