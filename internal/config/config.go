@@ -9,29 +9,40 @@ import (
 
 // Config represents the server configuration
 type Config struct {
-	Version string `json:"version"`
-	LogLevel string `json:"logLevel"`
-	SandboxType string `json:"sandboxType"`
+	Version       string         `json:"version"`
+	LogLevel      string         `json:"logLevel"`
+	SandboxType   string         `json:"sandboxType"`
 	ResourceLimits ResourceLimits `json:"resourceLimits"`
+	NLProcessing  NLProcessing   `json:"nlProcessing"`
 }
 
 // ResourceLimits defines resource constraints for the execution environment
 type ResourceLimits struct {
-	CPULimit int `json:"cpuLimit"`
+	CPULimit    int `json:"cpuLimit"`
 	MemoryLimit int `json:"memoryLimit"` // in MB
 	TimeoutSecs int `json:"timeoutSecs"`
+}
+
+// NLProcessing contains settings for natural language processing features
+type NLProcessing struct {
+	EnableFuzzyMatching bool    `json:"enableFuzzyMatching"`
+	MatchThreshold      float64 `json:"matchThreshold"`
 }
 
 // DefaultConfig returns the default configuration
 func DefaultConfig() *Config {
 	return &Config{
-		Version: "1.0.0",
-		LogLevel: "info",
+		Version:     "1.0.0",
+		LogLevel:    "info",
 		SandboxType: "process",
 		ResourceLimits: ResourceLimits{
-			CPULimit: 2,
+			CPULimit:    2,
 			MemoryLimit: 512, // 512 MB
 			TimeoutSecs: 30,
+		},
+		NLProcessing: NLProcessing{
+			EnableFuzzyMatching: true,
+			MatchThreshold:      0.4,
 		},
 	}
 }

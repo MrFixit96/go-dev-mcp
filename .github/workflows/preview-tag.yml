@@ -1,0 +1,36 @@
+name: Create Preview Tag
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'go.mod'
+      - 'cmd/**'
+      - 'internal/**'
+
+jobs:
+  create-preview-tag:
+    name: Create Preview Tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+      - name: Generate preview tag
+        id: preview-tag
+        run: |
+          PR_NUMBER=$(echo $GITHUB_REF | sed 's/.*\/pull\///')
+          CURRENT_DATE=$(date +%Y%m%d)
+          PREVIEW_TAG="v0.1.0-preview.pr$PR_NUMBER.$CURRENT_DATE"
+          echo "tag=$PREVIEW_TAG" >> $GITHUB_OUTPUT
+          
+      - name: Create tag
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a ${{ steps.preview-tag.outputs.tag }} -m "Preview release from PR #$PR_NUMBER"
+          git push origin ${{ steps.preview-tag.outputs.tag }}

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -53,7 +54,7 @@ func ExecuteGoAnalyzeTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		vetCmd := exec.Command("go", "vet", "./...")
 		vetCmd.Dir = tmpDir
 		vetResult, _ := execute(vetCmd)
-		
+
 		if vetResult.Stdout != "" || vetResult.Stderr != "" {
 			if vetResult.Stdout != "" {
 				issues = append(issues, vetResult.Stdout)
@@ -61,7 +62,7 @@ func ExecuteGoAnalyzeTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 			if vetResult.Stderr != "" {
 				issues = append(issues, vetResult.Stderr)
 			}
-			
+
 			if !vetResult.Successful {
 				success = false
 				message = "Analysis found issues"
@@ -69,21 +70,25 @@ func ExecuteGoAnalyzeTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		}
 	}
 
-	responseContent := fmt.Sprintf(`{
-		"success": %t,
-		"message": "%s",
-		"issues": %v,
-		"vet": {
-			"success": %t,
-			"issues": %v
-		}
-	}`, success, message, issues, success, issues)
-
-	if success {
-		return mcp.NewToolResultText(responseContent), nil
-	} else {
-		// Even though there are issues, the analysis tool itself succeeded
-		// So we return a success result with the analysis data
-		return mcp.NewToolResultText(responseContent), nil
+	response := map[string]interface{}{
+		"success": success,
+		"message": message,
+		"issues":  issues,
+		"vet": map[string]interface{}{
+			"success": success,
+			"issues":  issues,
+		},
 	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_analyze")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err)), nil
+	}
+
+	// Even though there might be issues, the analysis tool itself succeeded
+	// So we always return a success result with the analysis data
+	return mcp.NewToolResultText(string(jsonBytes)), nil
 }

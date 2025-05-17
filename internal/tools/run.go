@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,25 +52,24 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	// Prepare run command
 	runArgs := []string{"run", sourceFile}
 	runArgs = append(runArgs, cmdArgs...)
-	
+
 	cmd := exec.Command("go", runArgs...)
 	cmd.Dir = tmpDir
 
 	// Create a context with timeout
 	runCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 	defer cancel()
-	
+
 	// Set the command to use our context
 	cmd = exec.CommandContext(runCtx, cmd.Path, cmd.Args[1:]...)
 	cmd.Dir = tmpDir
 
 	// Execute command
 	result, err := execute(cmd)
-	
 	if runCtx.Err() == context.DeadlineExceeded {
 		return mcp.NewToolResultError(fmt.Sprintf("Program execution timed out after %.0f seconds", timeoutSecs)), nil
 	}
-	
+
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
 	}
@@ -81,18 +81,26 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		message = "Program execution failed"
 	}
 
-	responseContent := fmt.Sprintf(`{
-		"success": %t,
-		"message": "%s",
-		"stdout": "%s",
-		"stderr": "%s",
-		"exitCode": %d,
-		"duration": "%s"
-	}`, result.Successful, message, result.Stdout, result.Stderr, result.ExitCode, result.Duration.String())
+	response := map[string]interface{}{
+		"success":  result.Successful,
+		"message":  message,
+		"stdout":   result.Stdout,
+		"stderr":   result.Stderr,
+		"exitCode": result.ExitCode,
+		"duration": result.Duration.String(),
+	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_run")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err)), nil
+	}
 
 	if result.Successful {
-		return mcp.NewToolResultText(responseContent), nil
+		return mcp.NewToolResultText(string(jsonBytes)), nil
 	} else {
-		return mcp.NewToolResultError(responseContent), nil
+		return mcp.NewToolResultError(string(jsonBytes)), nil
 	}
 }
