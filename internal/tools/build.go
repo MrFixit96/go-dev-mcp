@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -65,33 +66,53 @@ func ExecuteGoBuildTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 
 // formatBuildSuccess creates a structured success response
 func formatBuildSuccess(result *ExecutionResult, outputPath string) *mcp.CallToolResult {
-	return mcp.NewToolResultText(fmt.Sprintf(`{
-		"success": true,
-		"message": "Compilation successful",
-		"outputPath": "%s",
-		"duration": "%s"
-	}`, outputPath, result.Duration.String()))
+	response := map[string]interface{}{
+		"success":    true,
+		"message":    "Compilation successful",
+		"outputPath": outputPath,
+		"duration":   result.Duration.String(),
+	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_build")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err))
+	}
+
+	return mcp.NewToolResultText(string(jsonBytes))
 }
 
 // formatBuildError creates a structured error response
 func formatBuildError(result *ExecutionResult) *mcp.CallToolResult {
 	// Parse Go build errors for more context
 	errorDetails := parseGoBuildErrors(result.Stderr)
-	
-	return mcp.NewToolResultError(fmt.Sprintf(`{
-		"success": false,
-		"message": "Compilation failed",
-		"stderr": "%s",
-		"exitCode": %d,
-		"duration": "%s",
-		"errorDetails": %s
-	}`, result.Stderr, result.ExitCode, result.Duration.String(), errorDetails))
+
+	response := map[string]interface{}{
+		"success":      false,
+		"message":      "Compilation failed",
+		"stderr":       result.Stderr,
+		"exitCode":     result.ExitCode,
+		"duration":     result.Duration.String(),
+		"errorDetails": errorDetails,
+	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_build")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err))
+	}
+
+	return mcp.NewToolResultError(string(jsonBytes))
 }
 
 // parseGoBuildErrors extracts meaningful error information from Go build output
 func parseGoBuildErrors(stderr string) string {
-	// In a real implementation, this would parse the error output 
+	// In a real implementation, this would parse the error output
 	// and structure it by file, line, error type, etc.
-	// For now, we're just returning the raw stderr as JSON string
-	return fmt.Sprintf(`"%s"`, stderr)
+	// For now, we're just returning the raw stderr
+	return stderr
 }

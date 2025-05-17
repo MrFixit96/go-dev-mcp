@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -53,7 +54,7 @@ func ExecuteGoTestTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		// If no test code provided but main code exists, create a simple test
 		testCode = generateSimpleTest()
 	}
-	
+
 	if err := os.WriteFile(testFile, []byte(testCode), 0644); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to write test code: %v", err)), nil
 	}
@@ -109,31 +110,51 @@ func formatTestSuccess(result *ExecutionResult, withCoverage bool) *mcp.CallTool
 	}
 
 	testStats := parseTestStats(result.Stdout)
-	
-	return mcp.NewToolResultText(fmt.Sprintf(`{
-		"success": true,
-		"message": "Tests passed",
-		"output": "%s",
-		"duration": "%s",
-		"coverage": "%s",
-		"testStats": %s
-	}`, result.Stdout, result.Duration.String(), coverageInfo, testStats))
+
+	response := map[string]interface{}{
+		"success":   true,
+		"message":   "Tests passed",
+		"output":    result.Stdout,
+		"duration":  result.Duration.String(),
+		"coverage":  coverageInfo,
+		"testStats": testStats,
+	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_test")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err))
+	}
+
+	return mcp.NewToolResultText(string(jsonBytes))
 }
 
 // formatTestError creates a structured error response for tests
 func formatTestError(result *ExecutionResult) *mcp.CallToolResult {
 	// Parse test errors for more context
 	errorDetails := parseTestErrors(result.Stdout, result.Stderr)
-	
-	return mcp.NewToolResultError(fmt.Sprintf(`{
-		"success": false,
-		"message": "Tests failed",
-		"output": "%s",
-		"stderr": "%s",
-		"exitCode": %d,
-		"duration": "%s",
-		"errorDetails": %s
-	}`, result.Stdout, result.Stderr, result.ExitCode, result.Duration.String(), errorDetails))
+
+	response := map[string]interface{}{
+		"success":      false,
+		"message":      "Tests failed",
+		"output":       result.Stdout,
+		"stderr":       result.Stderr,
+		"exitCode":     result.ExitCode,
+		"duration":     result.Duration.String(),
+		"errorDetails": errorDetails,
+	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_test")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err))
+	}
+
+	return mcp.NewToolResultError(string(jsonBytes))
 }
 
 // extractCoverageInfo extracts coverage information from test output
@@ -149,7 +170,7 @@ func extractCoverageInfo(output string) string {
 
 // parseTestStats extracts test statistics from output
 func parseTestStats(output string) string {
-	// In a real implementation, this would parse test output 
+	// In a real implementation, this would parse test output
 	// for test count, run time, etc. into structured JSON
 	return `{"count": "unknown", "passed": "unknown", "failed": "unknown"}`
 }
@@ -158,5 +179,5 @@ func parseTestStats(output string) string {
 func parseTestErrors(stdout, stderr string) string {
 	// In a real implementation, this would parse test failure output
 	// into structured JSON with file, line, and error details
-	return fmt.Sprintf(`"%s"`, stderr)
+	return stderr
 }

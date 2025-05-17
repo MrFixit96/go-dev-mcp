@@ -22,6 +22,69 @@ type ExecutionResult struct {
 	Command    string
 }
 
+// NLMetadata represents natural language metadata for tools
+type NLMetadata struct {
+	Aliases  []string `json:"aliases"`
+	Examples []string `json:"examples"`
+}
+
+// ToolNLMetadata maps tool names to their natural language metadata
+var ToolNLMetadata = map[string]NLMetadata{
+	"go_build": {
+		Aliases: []string{"compile", "build", "create executable"},
+		Examples: []string{
+			"compile this Go code",
+			"build this program",
+			"create an executable from this code",
+			"make a binary from this Go file",
+		},
+	},
+	"go_test": {
+		Aliases: []string{"test", "unit test", "run tests"},
+		Examples: []string{
+			"test this Go code",
+			"run unit tests",
+			"check if tests pass",
+			"verify test coverage",
+		},
+	},
+	"go_run": {
+		Aliases: []string{"run", "execute", "start"},
+		Examples: []string{
+			"run this Go code",
+			"execute this program",
+			"start this application with arguments",
+		},
+	},
+	"go_mod": {
+		Aliases: []string{"dependencies", "modules", "manage dependencies"},
+		Examples: []string{
+			"initialize a new module",
+			"update dependencies",
+			"add a new dependency",
+			"tidy up module dependencies",
+		},
+	},
+	"go_fmt": {
+		Aliases: []string{"format", "beautify", "pretty-print"},
+		Examples: []string{
+			"format this Go code",
+			"beautify this program",
+			"fix the formatting of this code",
+			"make this code look nice",
+		},
+	},
+	"go_analyze": {
+		Aliases: []string{"lint", "check", "validate", "inspect"},
+		Examples: []string{
+			"analyze this Go code for issues",
+			"check for bugs",
+			"validate this function",
+			"inspect code quality",
+		},
+	},
+}
+
 // execute runs a command and returns the execution result with better logging
 func execute(cmd *exec.Cmd) (*ExecutionResult, error) {
 	var stdout, stderr bytes.Buffer
@@ -99,12 +162,15 @@ func FormatCommandResult(result *ExecutionResult, responseType string) *mcp.Call
 
 	if result.Stderr != "" {
 		response["stderr"] = result.Stderr
-		
+
 		// Add structured error details if there's an error
 		if !result.Successful {
 			response["errorDetails"] = ParseGoErrors(result.Stderr)
 		}
 	}
+
+	// Add natural language metadata based on the tool type
+	AddNLMetadata(response, responseType)
 
 	jsonBytes, err := json.MarshalIndent(response, "", "  ")
 	if err != nil {
@@ -116,4 +182,12 @@ func FormatCommandResult(result *ExecutionResult, responseType string) *mcp.Call
 	} else {
 		return mcp.NewToolResultError(string(jsonBytes))
 	}
+}
+
+// AddNLMetadata adds natural language metadata to a response map
+func AddNLMetadata(response map[string]interface{}, toolName string) map[string]interface{} {
+	if metadata, exists := ToolNLMetadata[toolName]; exists {
+		response["nlMetadata"] = metadata
+	}
+	return response
 }

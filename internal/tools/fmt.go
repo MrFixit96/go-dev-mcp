@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -53,18 +54,25 @@ func ExecuteGoFmtTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	} else {
 		message = "Formatting failed"
 	}
-	
 	// Determine if code was changed
 	codeChanged := string(formattedCode) != code
-	
-	responseContent := fmt.Sprintf(`{
-		"success": %t,
-		"message": "%s",
-		"code": %q,
-		"stdout": "%s",
-		"stderr": "%s",
-		"codeChanged": %t
-	}`, result.Successful, message, string(formattedCode), result.Stdout, result.Stderr, codeChanged)
-	
-	return mcp.NewToolResultText(responseContent), nil
+
+	response := map[string]interface{}{
+		"success":     result.Successful,
+		"message":     message,
+		"code":        string(formattedCode),
+		"stdout":      result.Stdout,
+		"stderr":      result.Stderr,
+		"codeChanged": codeChanged,
+	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_fmt")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(string(jsonBytes)), nil
 }

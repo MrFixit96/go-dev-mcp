@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -60,7 +61,7 @@ func ExecuteGoModTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 	// Prepare command arguments
 	args := []string{"mod", command}
-	
+
 	// For init command, if modulePath is provided, add it
 	if command == "init" && modulePath != "" {
 		args = append(args, modulePath)
@@ -83,7 +84,6 @@ func ExecuteGoModTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 			goModContent = string(content)
 		}
 	}
-
 	var message string
 	if result.Successful {
 		message = fmt.Sprintf("go mod %s succeeded", command)
@@ -91,25 +91,30 @@ func ExecuteGoModTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		message = fmt.Sprintf("go mod %s failed", command)
 	}
 
-	responseContent := fmt.Sprintf(`{
-		"success": %t,
-		"message": "%s",
-		"stdout": "%s",
-		"stderr": "%s",
-		"exitCode": %d,
-		"duration": "%s"
-	}`, result.Successful, message, result.Stdout, result.Stderr, result.ExitCode, result.Duration.String())
-	
+	response := map[string]interface{}{
+		"success":  result.Successful,
+		"message":  message,
+		"stdout":   result.Stdout,
+		"stderr":   result.Stderr,
+		"exitCode": result.ExitCode,
+		"duration": result.Duration.String(),
+	}
+
 	if goModContent != "" {
-		// Append goModContent to the response
-		responseContent = responseContent[:len(responseContent)-2] + fmt.Sprintf(`,
-		"goModContent": %q
-	}`, goModContent)
+		response["goModContent"] = goModContent
+	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_mod")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err)), nil
 	}
 
 	if result.Successful {
-		return mcp.NewToolResultText(responseContent), nil
+		return mcp.NewToolResultText(string(jsonBytes)), nil
 	} else {
-		return mcp.NewToolResultError(responseContent), nil
+		return mcp.NewToolResultError(string(jsonBytes)), nil
 	}
 }
