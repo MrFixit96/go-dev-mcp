@@ -11,6 +11,7 @@ import (
 	
 	"github.com/MrFixit96/go-dev-mcp/internal/config"
 	"github.com/MrFixit96/go-dev-mcp/internal/tools"
+	"github.com/MrFixit96/go-dev-mcp/internal/server" // Add this import for the middleware
 )
 
 // main is the entry point for the Go Development MCP Server.
@@ -25,10 +26,25 @@ func main() {
 		cfg = config.DefaultConfig()
 	}
 	
-	// Create MCP server - use the simplest constructor for v0.19.0
+	// Create middleware
+	loggingMiddleware := server.CreateLoggingMiddleware()
+	allowedTools := map[string]bool{
+		"go_build":   true,
+		"go_test":    true,
+		"go_run":     true,
+		"go_mod":     true,
+		"go_fmt":     true,
+		"go_analyze": true,
+	}
+	authMiddleware := server.CreateAuthMiddleware(allowedTools)
+	
+	// Create MCP server with middleware
 	s := server.NewMCPServer(
 		"Go Development Tools",
 		cfg.Version,
+		server.WithToolHandlerMiddleware(loggingMiddleware),
+		server.WithToolHandlerMiddleware(authMiddleware),
+		server.WithRecovery(),
 	)
 	
 	// Handle signals for graceful shutdown
