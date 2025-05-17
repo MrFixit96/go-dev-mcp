@@ -11,6 +11,13 @@ The Go Development MCP Server is a comprehensive solution for integrating Go dev
 - **Go Format**: Format Go code according to standard conventions
 - **Go Analyze**: Analyze Go code for issues using static analysis tools
 
+### New in This Release
+
+- **Project Path Support**: All tools now support working with existing Go project directories
+- **Strategy Pattern**: Flexible execution strategies for code snippets vs. project directories
+- **Enhanced Response Formatting**: Better structured responses with natural language metadata
+- **Improved Error Handling**: More detailed and helpful error messages
+
 ## Installation
 
 ### Prerequisites
@@ -119,6 +126,38 @@ To integrate with Claude Desktop, update your `claude_desktop_config.json` file:
     }
   }
 }
+```
+
+## Usage
+
+### Working with Code Snippets
+
+All tools accept Go code directly through the `code` parameter:
+
+```
+// Use go_build to compile code
+go_build(code: "package main\n\nfunc main() {\n\tfmt.Println(\"Hello World\")\n}")
+
+// Run tests with go_test
+go_test(code: "package main", testCode: "package main\n\nimport \"testing\"\n\nfunc TestHello(t *testing.T) {...}")
+```
+
+### Working with Project Directories
+
+All tools now support working with existing Go project directories through the new `project_path` parameter:
+
+```
+// Compile a project
+go_build(project_path: "/path/to/your/go/project")
+
+// Run tests in a project
+go_test(project_path: "/path/to/your/go/project", verbose: true, coverage: true)
+
+// Format all files in a project
+go_fmt(project_path: "/path/to/your/go/project")
+
+// Analyze a project for issues
+go_analyze(project_path: "/path/to/your/go/project", vet: true)
 ```
 
 ## Configuration
