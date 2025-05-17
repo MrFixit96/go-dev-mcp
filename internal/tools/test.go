@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -14,52 +11,18 @@ import (
 
 // ExecuteGoTestTool handles the go_test tool execution
 func ExecuteGoTestTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Extract parameters using helper functions
-	code := mcp.ParseString(req, "code", "")
-	testCode := mcp.ParseString(req, "testCode", "")
+	// Resolve input
+	input, err := ResolveInput(req)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	// Extract parameters
 	testPattern := mcp.ParseString(req, "testPattern", "")
 	verbose := mcp.ParseBoolean(req, "verbose", false)
 	coverage := mcp.ParseBoolean(req, "coverage", false)
 
-	// Validate parameters
-	if code == "" && testCode == "" {
-		return mcp.NewToolResultError("Either 'code' or 'testCode' must be provided"), nil
-	}
-
-	// Create temporary directory for the operation
-	tmpDir, err := os.MkdirTemp("", "go-test-*")
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create temp directory: %v", err)), nil
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Create a simple Go module
-	modCmd := exec.Command("go", "mod", "init", "test")
-	modCmd.Dir = tmpDir
-	if output, err := modCmd.CombinedOutput(); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to initialize Go module: %v\n%s", err, output)), nil
-	}
-
-	// Write main code to file if provided
-	if code != "" {
-		sourceFile := filepath.Join(tmpDir, "main.go")
-		if err := os.WriteFile(sourceFile, []byte(code), 0644); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to write source code: %v", err)), nil
-		}
-	}
-
-	// Write test code to file
-	testFile := filepath.Join(tmpDir, "main_test.go")
-	if testCode == "" && code != "" {
-		// If no test code provided but main code exists, create a simple test
-		testCode = generateSimpleTest()
-	}
-
-	if err := os.WriteFile(testFile, []byte(testCode), 0644); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write test code: %v", err)), nil
-	}
-
-	// Prepare test command
+	// Prepare test args
 	args := []string{"test"}
 	if verbose {
 		args = append(args, "-v")
@@ -70,13 +33,12 @@ func ExecuteGoTestTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	if testPattern != "" {
 		args = append(args, "-run", testPattern)
 	}
+
+	// Always add ./... to run all tests in the directory
 	args = append(args, "./...")
-
-	cmd := exec.Command("go", args...)
-	cmd.Dir = tmpDir
-
-	// Execute command
-	result, err := execute(cmd)
+	// Execute using appropriate strategy
+	strategy := GetExecutionStrategy(input, args...)
+	result, err := strategy.Execute(ctx, input, args)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
 	}

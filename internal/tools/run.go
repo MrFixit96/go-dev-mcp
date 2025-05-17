@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -14,16 +11,24 @@ import (
 
 // ExecuteGoRunTool handles the go_run tool execution
 func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Extract parameters
-	code, ok := req.Params.Arguments["code"].(string)
-	if !ok {
-		return mcp.NewToolResultError("code must be a string"), nil
+	// Resolve input
+	input, err := ResolveInput(req)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	// Get args if provided
 	var cmdArgs []string
-	if argsInterface, ok := req.Params.Arguments["args"].([]interface{}); ok {
-		for _, arg := range argsInterface {
+	if argsObj, ok := req.Params.Arguments["args"].(map[string]interface{}); ok {
+		// Handle args as an object (per the mcp.WithObject parameter)
+		for _, v := range argsObj {
+			if strArg, ok := v.(string); ok {
+				cmdArgs = append(cmdArgs, strArg)
+			}
+		}
+	} else if argsArray, ok := req.Params.Arguments["args"].([]interface{}); ok {
+		// Handle args as an array (for backward compatibility)
+		for _, arg := range argsArray {
 			if strArg, ok := arg.(string); ok {
 				cmdArgs = append(cmdArgs, strArg)
 			}
@@ -36,37 +41,27 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		timeoutSecs = timeout
 	}
 
-	// Create temporary directory for the operation
-	tmpDir, err := os.MkdirTemp("", "go-run-*")
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create temp directory: %v", err)), nil
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Write code to temporary file
-	sourceFile := filepath.Join(tmpDir, "main.go")
-	if err := os.WriteFile(sourceFile, []byte(code), 0644); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write source code: %v", err)), nil
-	}
-
-	// Prepare run command
-	runArgs := []string{"run", sourceFile}
-	runArgs = append(runArgs, cmdArgs...)
-
-	cmd := exec.Command("go", runArgs...)
-	cmd.Dir = tmpDir
-
-	// Create a context with timeout
-	runCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
+	// Create execution context with timeout
+	execCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 	defer cancel()
 
-	// Set the command to use our context
-	cmd = exec.CommandContext(runCtx, cmd.Path, cmd.Args[1:]...)
-	cmd.Dir = tmpDir
+	// Prepare run args
+	args := []string{"run"}
 
-	// Execute command
-	result, err := execute(cmd)
-	if runCtx.Err() == context.DeadlineExceeded {
+	if input.Source == SourceCode {
+		args = append(args, input.MainFile)
+	} else {
+		args = append(args, "./...")
+	}
+
+	// Add command-line arguments
+	args = append(args, cmdArgs...)
+	// Execute using appropriate strategy
+	strategy := GetExecutionStrategy(input, args...)
+	result, err := strategy.Execute(execCtx, input, args)
+
+	// Check for timeout
+	if execCtx.Err() == context.DeadlineExceeded {
 		return mcp.NewToolResultError(fmt.Sprintf("Program execution timed out after %.0f seconds", timeoutSecs)), nil
 	}
 
@@ -74,6 +69,7 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
 	}
 
+	// Format response
 	var message string
 	if result.Successful {
 		message = "Program executed successfully"
