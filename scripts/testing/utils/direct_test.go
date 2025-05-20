@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/MrFixit96/go-dev-mcp/internal/tools"
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/MrFixit96/go-dev-mcp/internal/tools"
 )
 
 // Run executes a test for different execution strategies
@@ -73,7 +73,7 @@ func GetMessage() string {
 	fmt.Printf("Project path result: %s\n", pathResult.Result.(tools.ExecutionResult).Stdout)
 	// Now test with hybrid (both code and project path)
 	fmt.Println("\n=== Testing with hybrid strategy (code + project path) ===")
-
+	
 	// Create a CallToolRequest with both code and project_path
 	hybridReq := mcp.CallToolRequest{
 		Params: mcp.Params{
@@ -84,7 +84,7 @@ func GetMessage() string {
 			},
 		},
 	}
-
+	
 	// Execute the tool with the request
 	hybridResult, err := tools.ExecuteGoRunTool(context.Background(), hybridReq)
 	if err != nil {
@@ -94,7 +94,7 @@ func GetMessage() string {
 	// Extract result and check if it's what we expect
 	if hybridResult != nil && hybridResult.Result != nil {
 		fmt.Printf("Hybrid result received successfully\n")
-
+		
 		// Check if the hybrid strategy worked correctly
 		fmt.Println("\n✅ SUCCESS: Hybrid strategy executed correctly!")
 	} else {

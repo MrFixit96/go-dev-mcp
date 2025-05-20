@@ -12,7 +12,6 @@ testing/
 ├── core/              # Comprehensive test suites that test all tools and modes
 ├── strategies/        # Tests focused on specific execution strategies
 ├── utils/             # Shared utility functions and Go test packages
-├── GETTING_STARTED.md # Quick reference guide
 └── README.md          # This documentation file
 ```
 
@@ -39,29 +38,6 @@ The Go Development MCP Server communicates via stdin/stdout rather than HTTP, al
    - Modified code from the `code` parameter
    
    This strategy is critical for providing context-aware code execution while allowing modifications.
-
-## Master Test Runner
-
-The `run_tests.ps1` script provides a convenient way to run all tests or specific categories:
-
-```powershell
-# Run all tests
-.\run_tests.ps1 -TestType all
-
-# Run only basic tests
-.\run_tests.ps1 -TestType basic
-
-# Run only core tests
-.\run_tests.ps1 -TestType core
-
-# Run only strategy tests
-.\run_tests.ps1 -TestType strategies
-```
-
-Additional parameters:
-- `-VerboseOutput`: Show detailed test information
-- `-KeepTestDirs`: Keep temporary test directories for inspection
-- `-ServerExecutable <path>`: Specify a custom server executable path
 
 ## Core Test Scripts
 
@@ -204,29 +180,5 @@ If tests fail:
 1. Check that the server executable path is correct
 2. Verify that Go is properly installed and in your PATH
 3. Check for any required dependencies
-4. Use the `-VerboseOutput` flag for more detailed output
+4. Use the `-Verbose` flag for more detailed output
 5. Use the `-KeepTestDirs` flag to preserve test directories for inspection
-
-## Recent Improvements
-
-### Test Framework Enhancements
-
-1. **Improved Test Result Tracking**
-   - Fixed test result counting in `run_tests.ps1`
-   - Added consistent exit code handling in all test scripts
-   - Proper scoping for test results collections
-
-2. **Enhanced Reliability**
-   - Added server availability checking to `e2e_test.ps1`
-   - Implemented file locking protection with retries
-   - Improved cleanup procedures with garbage collection
-
-3. **Better Test Organization**
-   - Fixed "Project with Dependencies" test in `hybrid_strategy_test.ps1`
-   - Improved documentation and examples
-
-## Getting Started
-
-For a quick guide on running tests, see [GETTING_STARTED.md](GETTING_STARTED.md).
-
-For more information on the Go Development MCP Server, refer to the main [README.md](../README.md).

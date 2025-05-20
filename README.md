@@ -26,17 +26,23 @@ The server includes end-to-end behavioral testing capabilities to verify that it
 ### Running the Tests
 
 ```powershell
-# Start the server in one terminal
-cd go-dev-mcp
-.\build\server.exe
-
-# Run the tests in another terminal
+# Quick tests
 cd go-dev-mcp\scripts\testing
-.\e2e_test.ps1
+.\basic\simple_test.ps1
 
-# Test the hybrid execution strategy specifically
-.\hybrid_strategy_test.ps1
+# Comprehensive tests
+cd go-dev-mcp\scripts\testing
+.\core\all_tools_test.ps1 -Verbose
+
+# Strategy-specific tests
+cd go-dev-mcp\scripts\testing
+.\strategies\hybrid_strategy_test.ps1 -Verbose
 ```
+
+The testing scripts are organized into categories:
+- **Basic tests**: Simple, quick-running tests for sanity checks
+- **Core tests**: Comprehensive tests covering all tools and input modes
+- **Strategy tests**: Tests focused on specific execution strategies like hybrid execution
 
 See the [testing README](scripts/testing/README.md) for more details.
 
