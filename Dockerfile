@@ -20,9 +20,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o go-dev-mcp ./cmd/serve
 # Stage 2: Create the minimal runtime image
 FROM alpine:3.18
 
-# Install Go runtime dependencies
-RUN apk add --no-cache go
-
 # Set working directory
 WORKDIR /app
 
@@ -31,9 +28,6 @@ COPY --from=builder /app/go-dev-mcp /app/go-dev-mcp
 
 # Create default config directory
 RUN mkdir -p /etc/go-dev-mcp
-
-# Copy default config
-COPY --from=builder /app/internal/config/config.go /etc/go-dev-mcp/config.example.json
 
 # Set environment variables
 ENV PATH="/app:${PATH}"
