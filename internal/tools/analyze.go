@@ -13,16 +13,14 @@ import (
 
 // ExecuteGoAnalyzeTool handles the go_analyze tool execution
 func ExecuteGoAnalyzeTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Extract parameters
-	code, ok := req.Params.Arguments["code"].(string)
+	// Extract parameters using new v0.29.0 API
+	code, ok := req.GetArguments()["code"].(string)
 	if !ok {
 		return mcp.NewToolResultError("code must be a string"), nil
 	}
 
-	runVet := true
-	if vet, ok := req.Params.Arguments["vet"].(bool); ok {
-		runVet = vet
-	}
+	// Use Parse method for optional boolean parameter
+	runVet := mcp.ParseBoolean(req, "vet", true)
 
 	// Create temporary directory for the operation
 	tmpDir, err := os.MkdirTemp("", "go-analyze-*")

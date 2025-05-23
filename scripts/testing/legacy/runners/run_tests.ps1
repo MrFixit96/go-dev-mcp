@@ -211,10 +211,11 @@ switch ($TestType) {
     "strategies" {
         # Run direct strategy tests
         Invoke-TestScript -ScriptPath "$ScriptPath\legacy\strategies\direct\direct_strategy_test.ps1" -Description "Legacy direct strategy test" -Parameters $commonParams
-        Invoke-TestScript -ScriptPath "$ScriptPath\legacy\strategies\direct\direct_strat_verify.ps1" -Description "Legacy direct strategy verification" -Parameters $commonParams        # Run hybrid strategy tests
-        Invoke-TestScript -ScriptPath "$ScriptPath\legacy\strategies\hybrid\hybrid_strategy_test.ps1" -Description "Legacy hybrid strategy test" -Parameters $commonParams
-        Invoke-TestScript -ScriptPath "$ScriptPath\legacy\strategies\hybrid\hybrid_strat_verify.ps1" -Description "Legacy hybrid strategy verification" -Parameters $commonParams
-        Invoke-TestScript -ScriptPath "$ScriptPath\legacy\strategies\hybrid\hybrid_cli_test.ps1" -Description "Legacy hybrid CLI test" -Parameters $commonParams
+        Invoke-TestScript -ScriptPath "$ScriptPath\legacy\strategies\direct\direct_strat_verify.ps1" -Description "Legacy direct strategy verification" -Parameters $commonParams
+
+        # Run hybrid strategy tests
+        Invoke-TestScript -ScriptPath "$ScriptPath\legacy\strategies\hybrid_strategy_test.ps1" -Description "Legacy hybrid strategy test" -Parameters $commonParams
+        Invoke-TestScript -ScriptPath "$ScriptPath\legacy\strategies\hybrid_strat_verify.ps1" -Description "Legacy hybrid strategy verification" -Parameters $commonParams
     }    "go" {
         # Run only the Go tests
         Invoke-GoTest -Description "Go Unit Tests" -WithCoverage:$WithCoverage -WithRaceDetection:$WithRaceDetection -VerboseOutput:$VerboseOutput

@@ -13,19 +13,19 @@ import (
 
 // ExecuteGoModTool handles the go_mod tool execution
 func ExecuteGoModTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Extract parameters
-	command, ok := req.Params.Arguments["command"].(string)
+	// Extract parameters using new v0.29.0 API
+	command, ok := req.GetArguments()["command"].(string)
 	if !ok {
 		return mcp.NewToolResultError("command must be a string"), nil
 	}
 
 	modulePath := ""
-	if path, ok := req.Params.Arguments["modulePath"].(string); ok {
+	if path, ok := req.GetArguments()["modulePath"].(string); ok {
 		modulePath = path
 	}
 
 	code := ""
-	if c, ok := req.Params.Arguments["code"].(string); ok {
+	if c, ok := req.GetArguments()["code"].(string); ok {
 		code = c
 	}
 

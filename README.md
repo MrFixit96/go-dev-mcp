@@ -13,17 +13,40 @@ The Go Development MCP Server is a comprehensive solution for integrating Go dev
 
 ### New in This Release
 
+- **MCP v0.29.0 Compatibility**: Updated to use the latest Model Context Protocol v0.29.0
 - **Project Path Support**: All tools now support working with existing Go project directories
 - **Strategy Pattern**: Flexible execution strategies for code snippets vs. project directories
 - **Enhanced Response Formatting**: Better structured responses with natural language metadata
 - **Improved Error Handling**: More detailed and helpful error messages
 - **End-to-End Testing**: Comprehensive behavioral testing scripts to verify functionality
+- **Modern Testing Framework**: New Go-based testing framework with parallel test execution
 
 ## Testing
 
-The server includes end-to-end behavioral testing capabilities to verify that it works correctly with real Go projects. The tests verify all input modes (code-only, project path, and hybrid) and ensure that the execution strategies work as expected.
+The server includes comprehensive testing capabilities to verify that it works correctly with real Go projects. Testing is provided through two frameworks:
+
+1. **Go Testing Framework**: Modern, parallel test framework using Go's native testing facilities and testify
+2. **PowerShell Testing**: Legacy end-to-end behavioral tests (for backward compatibility)
+
+The tests verify all input modes (code-only, project path, and hybrid) and ensure that the execution strategies work as expected.
 
 ### Running the Tests
+
+#### Go Tests (Recommended)
+
+```powershell
+# Run all Go tests
+cd go-dev-mcp
+.\scripts\testing\run_tests.ps1 -TestType go -UseGoTests -WithCoverage
+
+# Run with race detection
+.\scripts\testing\run_tests.ps1 -TestType go -UseGoTests -WithRaceDetection
+
+# Run directly with Go
+go test -v ./internal/tools/...
+```
+
+#### PowerShell Tests (Legacy)
 
 ```powershell
 # Quick tests
@@ -39,7 +62,10 @@ cd go-dev-mcp\scripts\testing
 .\strategies\hybrid_strategy_test.ps1 -Verbose
 ```
 
+For detailed information about the testing framework, see the [Testing Documentation](scripts/testing/TESTING.md).
+
 The testing scripts are organized into categories:
+
 - **Basic tests**: Simple, quick-running tests for sanity checks
 - **Core tests**: Comprehensive tests covering all tools and input modes
 - **Strategy tests**: Tests focused on specific execution strategies like hybrid execution
@@ -58,13 +84,15 @@ See the [testing README](scripts/testing/README.md) for more details.
 #### Manual Installation
 
 1. Clone the repository:
-   ```
+
+   ```bash
    git clone https://github.com/MrFixit96/go-dev-mcp.git
    cd go-dev-mcp
    ```
 
 2. Build the executable:
-   ```
+
+   ```bash
    go build -o go-dev-mcp.exe ./cmd/server
    ```
 
@@ -72,7 +100,7 @@ See the [testing README](scripts/testing/README.md) for more details.
 
 #### Using WinGet (Coming Soon)
 
-```
+```powershell
 winget install go-dev-mcp
 ```
 
@@ -80,7 +108,7 @@ winget install go-dev-mcp
 
 #### Using Homebrew (Coming Soon)
 
-```
+```bash
 brew install go-dev-mcp
 ```
 
