@@ -9,11 +9,11 @@ import (
 
 // Config represents the server configuration
 type Config struct {
-	Version       string         `json:"version"`
-	LogLevel      string         `json:"logLevel"`
-	SandboxType   string         `json:"sandboxType"`
+	Version        string         `json:"version"`
+	LogLevel       string         `json:"logLevel"`
+	SandboxType    string         `json:"sandboxType"`
 	ResourceLimits ResourceLimits `json:"resourceLimits"`
-	NLProcessing  NLProcessing   `json:"nlProcessing"`
+	NLProcessing   NLProcessing   `json:"nlProcessing"`
 }
 
 // ResourceLimits defines resource constraints for the execution environment

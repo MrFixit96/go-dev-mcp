@@ -32,15 +32,14 @@ type InputContext struct {
 
 // ResolveInput determines whether the request contains code or a project path
 func ResolveInput(req mcp.CallToolRequest) (InputContext, error) {
-	ctx := InputContext{Source: SourceUnknown}
-	// Extract code if provided
-	if code, ok := req.Params.Arguments["code"].(string); ok && code != "" {
+	ctx := InputContext{Source: SourceUnknown}	// Extract code if provided
+	if code, ok := req.GetArguments()["code"].(string); ok && code != "" {
 		ctx.Code = code
 		ctx.Source = SourceCode
 	}
 
 	// Extract project_path if provided
-	if path, ok := req.Params.Arguments["project_path"].(string); ok && path != "" {
+	if path, ok := req.GetArguments()["project_path"].(string); ok && path != "" {
 		ctx.ProjectPath = path
 		// Validate path exists
 		if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -54,9 +53,8 @@ func ResolveInput(req mcp.CallToolRequest) (InputContext, error) {
 			ctx.Source = SourceProjectPath
 		}
 	}
-
 	// Extract test code if provided
-	if testCode, ok := req.Params.Arguments["testCode"].(string); ok && testCode != "" {
+	if testCode, ok := req.GetArguments()["testCode"].(string); ok && testCode != "" {
 		ctx.TestCode = testCode
 	}
 
@@ -66,7 +64,7 @@ func ResolveInput(req mcp.CallToolRequest) (InputContext, error) {
 	}
 
 	// Set default main file
-	if mainFile, ok := req.Params.Arguments["mainFile"].(string); ok && mainFile != "" {
+	if mainFile, ok := req.GetArguments()["mainFile"].(string); ok && mainFile != "" {
 		ctx.MainFile = mainFile
 	} else {
 		ctx.MainFile = "main.go"
