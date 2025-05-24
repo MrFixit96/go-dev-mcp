@@ -145,10 +145,8 @@ func ProcessData%d(data []string) []string {
 	builder := strings.Builder{}
 	builder.WriteString(header)
 
-	// Add import if needed
-	if numStatements > 0 {
-		builder.WriteString("\nimport \"fmt\"\n")
-	}
+	// Always add the import for fmt
+	builder.WriteString("\nimport \"fmt\"\n")
 
 	builder.WriteString(funcSig)
 
