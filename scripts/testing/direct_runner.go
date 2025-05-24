@@ -1,6 +1,5 @@
 //go:build direct_test
 // +build direct_test
-
 // Package main provides a direct execution strategy test entry point
 package main
 

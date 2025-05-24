@@ -50,7 +50,7 @@ go 1.21
 	if err := os.WriteFile(filepath.Join(tempDir, "go.mod"), goModContent, 0644); err != nil {
 		log.Fatalf("Failed to write go.mod: %v", err)
 	}
-
+	
 	// Execute go run directly in the project directory
 	cmd := exec.Command("go", "run", ".")
 	cmd.Dir = tempDir
