@@ -52,6 +52,9 @@ if ($Verbose) {
     $VerbosePreference = "Continue"
 }
 
+# Global variables for test tracking
+$script:TestResults = @()
+
 #region Helper Functions
 
 function Write-Title {
@@ -239,6 +242,14 @@ function Format-TestResult {
     )
     
     $elapsed = Get-ElapsedTime $Timer
+    
+    # Add test result to the collection
+    $script:TestResults += @{
+        Name = $TestName
+        Success = $Success
+        ElapsedTime = $elapsed
+        Message = $Message
+    }
     
     if ($Success) {
         Write-Success "$TestName - Passed (${elapsed})"
@@ -660,16 +671,46 @@ Format-TestResult -TestName "Analyze with hybrid mode" -Success $bugFound -Timer
 #region Test Summary
 
 Write-Title "Test Summary"
-Write-Info "All tests completed. Check the results above for details."
+# Global variable to track test results
+$global:testsFailed = $false
+
+# Count and display test results
+$totalTests = 0
+$passedTests = 0
+$failedTests = 0
+
+# Process test results
+foreach ($test in $script:TestResults) {
+    $totalTests++
+    if ($test.Success) {
+        $passedTests++
+    } else {
+        $failedTests++
+        $global:testsFailed = $true
+    }
+}
+
+Write-Info "All tests completed: $passedTests passed, $failedTests failed"
 Write-Info "Test directories kept at: $TestDir" -ForegroundColor Yellow
 
 # Clean up test directories if not keeping them
 if (-not $KeepTestDirs) {
     Write-Info "Cleaning up test directories..."
-    Remove-Item -Path $TestDir -Recurse -Force
-    Write-Info "Test directories removed."
+    try {
+        Remove-Item -Path $TestDir -Recurse -Force -ErrorAction Stop
+        Write-Info "Test directories removed."
+    } catch {
+        Write-Failure "Could not remove test directories: $_"
+    }
 } else {
     Write-Info "Test directories kept for inspection at: $TestDir"
+}
+
+# Return appropriate exit code
+if ($global:testsFailed) {
+    exit 1
+} else {
+    exit 0
 }
 
 #endregion

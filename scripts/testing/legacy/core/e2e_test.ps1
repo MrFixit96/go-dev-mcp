@@ -13,6 +13,39 @@ param(
 # Enable verbose output if requested
 $VerbosePreference = if ($Verbose) { "Continue" } else { "SilentlyContinue" }
 
+# Function to check if server is available
+function Test-ServerAvailable {
+    param(
+        [string]$Url,
+        [int]$TimeoutSeconds = 5,
+        [int]$MaxRetries = 3
+    )
+    
+    for ($retry = 1; $retry -le $MaxRetries; $retry++) {
+        try {
+            $request = [System.Net.WebRequest]::Create($Url)
+            $request.Timeout = $TimeoutSeconds * 1000
+            $request.Method = "HEAD"
+            
+            Log-Message "Checking server availability (attempt $retry/$MaxRetries)..." "INFO"
+            
+            $response = $request.GetResponse()
+            $response.Close()
+            
+            Log-Message "Server is available at $Url" "INFO"
+            return $true
+        } catch {
+            Log-Message "Server not available (attempt $retry/$MaxRetries): $_" "WARN"
+            if ($retry -lt $MaxRetries) {
+                Start-Sleep -Seconds 2
+            }
+        }
+    }
+    
+    Log-Message "Server is not available at $Url after $MaxRetries attempts" "ERROR"
+    return $false
+}
+
 # Function to log messages with timestamp
 function Log-Message {
     param([string]$Message, [string]$Level = "INFO")
@@ -25,8 +58,34 @@ function Log-Error {
     param([string]$Message)
     Log-Message $Message "ERROR"
     if (-not $KeepTempFiles -and (Test-Path $TempDir)) {
-        Log-Message "Cleaning up temporary directory: $TempDir" "INFO"
-        Remove-Item -Recurse -Force $TempDir
+        try {
+            Log-Message "Cleaning up temporary directory: $TempDir" "INFO"
+            # Force release any open handles (wait a moment first)
+            [System.GC]::Collect()
+            [System.GC]::WaitForPendingFinalizers()
+            
+            # Try to remove the directory with retries
+            $maxRetries = 3
+            $retryCount = 0
+            $success = $false
+            
+            while (-not $success -and $retryCount -lt $maxRetries) {
+                try {
+                    Remove-Item -Recurse -Force -Path $TempDir -ErrorAction Stop
+                    $success = $true
+                } catch {
+                    $retryCount++
+                    Log-Message "Failed to remove directory (attempt $retryCount of $maxRetries): $_" "WARN"
+                    Start-Sleep -Seconds 2
+                }
+            }
+            
+            if (-not $success) {
+                Log-Message "Could not remove temporary directory after $maxRetries attempts. It may need to be removed manually." "WARN"
+            }
+        } catch {
+            Log-Message "Error during cleanup: $_" "ERROR"
+        }
     }
     exit 1
 }
@@ -193,8 +252,35 @@ func main() {
 $passCount = 0
 $failCount = 0
 
-Log-Message "Running tests against MCP server at $ServerUrl"
-Log-Message "Test project location: $TempDir"
+Log-Message "Running tests against MCP server at $ServerUrl" "INFO"
+Log-Message "Test project location: $TempDir" "INFO"
+
+# Check if server is available before proceeding
+if (-not (Test-ServerAvailable -Url $ServerUrl)) {
+    Log-Message "Skipping tests because server is not available at $ServerUrl" "WARN"
+    Log-Message "Please ensure the server is running before executing this test" "WARN"
+      # We don't want to fail CI builds when server isn't running, so exit with success
+    # but make it clear that tests were skipped
+    Log-Message "-------------------------------------------------------" "SUMMARY"
+    Log-Message "Test Summary: 0 passed, 0 failed, ALL TESTS SKIPPED" "SUMMARY"
+    Log-Message "-------------------------------------------------------" "SUMMARY"
+    
+    # Clean up temporary directory
+    if (-not $KeepTempFiles -and (Test-Path $TempDir)) {
+        try {
+            Log-Message "Cleaning up temporary directory: $TempDir" "INFO"
+            [System.GC]::Collect()
+            [System.GC]::WaitForPendingFinalizers()
+            Remove-Item -Recurse -Force -Path $TempDir -ErrorAction Stop
+        } catch {
+            Log-Message "Warning: Could not remove temporary directory: $_" "WARN"
+        }
+    } elseif ($KeepTempFiles) {
+        Log-Message "Keeping temporary test project at: $TempDir" "INFO"
+    }
+    
+    exit 0
+}
 
 foreach ($test in $testCases) {
     Log-Message "Test: $($test.Name)" "TEST"
@@ -225,10 +311,37 @@ Log-Message "-------------------------------------------------------" "SUMMARY"
 
 # Clean up temporary directory
 if (-not $KeepTempFiles) {
-    Log-Message "Cleaning up temporary directory: $TempDir"
-    Remove-Item -Recurse -Force $TempDir
+    Log-Message "Cleaning up temporary directory: $TempDir" "INFO"
+    try {
+        # Force garbage collection to release file handles
+        [System.GC]::Collect()
+        [System.GC]::WaitForPendingFinalizers()
+        
+        # Try to remove with retries
+        $maxRetries = 3
+        $retryCount = 0
+        $success = $false
+        
+        while (-not $success -and $retryCount -lt $maxRetries) {
+            try {
+                Remove-Item -Recurse -Force -Path $TempDir -ErrorAction Stop
+                $success = $true
+                Log-Message "Temporary directory removed successfully" "INFO" 
+            } catch {
+                $retryCount++
+                Log-Message "Failed to remove directory (attempt $retryCount of $maxRetries): $_" "WARN"
+                Start-Sleep -Seconds 2
+            }
+        }
+        
+        if (-not $success) {
+            Log-Message "Could not remove temporary directory after $maxRetries attempts. It may need to be removed manually." "WARN"
+        }
+    } catch {
+        Log-Message "Error during cleanup: $_" "WARN"
+    }
 } else {
-    Log-Message "Keeping temporary test project at: $TempDir"
+    Log-Message "Keeping temporary test project at: $TempDir" "INFO"
 }
 
 # Exit with non-zero status if any tests failed

@@ -54,12 +54,14 @@ func main() {
     # Run the code in the hybrid directory
     Write-Host "Running with hybrid strategy..." -ForegroundColor Yellow
     $result = & go run "$hybridDir\main.go"
-    
-    # Verify the output
+      # Verify the output
+    $testPassed = $false
     if ($result -eq "Hello from the modified code") {
         Write-Host "✅ SUCCESS: Hybrid strategy applied modified code correctly" -ForegroundColor Green
+        $testPassed = $true
     } else {
         Write-Host "❌ FAILURE: Expected 'Hello from the modified code' but got '$result'" -ForegroundColor Red
+        $testPassed = $false
     }
 }
 finally {
@@ -70,4 +72,11 @@ finally {
     if (Test-Path $hybridDir) {
         Remove-Item -Path $hybridDir -Recurse -Force -ErrorAction SilentlyContinue
     }
+}
+
+# Return exit code based on test result
+if ($testPassed) {
+    exit 0
+} else {
+    exit 1
 }

@@ -16,17 +16,16 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-
 	// Get args if provided
 	var cmdArgs []string
-	if argsObj, ok := req.Params.Arguments["args"].(map[string]interface{}); ok {
+	if argsObj, ok := req.GetArguments()["args"].(map[string]interface{}); ok {
 		// Handle args as an object (per the mcp.WithObject parameter)
 		for _, v := range argsObj {
 			if strArg, ok := v.(string); ok {
 				cmdArgs = append(cmdArgs, strArg)
 			}
 		}
-	} else if argsArray, ok := req.Params.Arguments["args"].([]interface{}); ok {
+	} else if argsArray, ok := req.GetArguments()["args"].([]interface{}); ok {
 		// Handle args as an array (for backward compatibility)
 		for _, arg := range argsArray {
 			if strArg, ok := arg.(string); ok {
@@ -35,11 +34,8 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		}
 	}
 
-	// Get timeout if provided
-	timeoutSecs := 30.0
-	if timeout, ok := req.Params.Arguments["timeoutSecs"].(float64); ok && timeout > 0 {
-		timeoutSecs = timeout
-	}
+	// Get timeout if provided using Parse method
+	timeoutSecs := mcp.ParseFloat64(req, "timeoutSecs", 30.0)
 
 	// Create execution context with timeout
 	execCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
@@ -59,7 +55,6 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	// Execute using appropriate strategy
 	strategy := GetExecutionStrategy(input, args...)
 	result, err := strategy.Execute(execCtx, input, args)
-
 	// Check for timeout
 	if execCtx.Err() == context.DeadlineExceeded {
 		return mcp.NewToolResultError(fmt.Sprintf("Program execution timed out after %.0f seconds", timeoutSecs)), nil
@@ -88,15 +83,10 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 	// Add natural language metadata
 	AddNLMetadata(response, "go_run")
-
 	jsonBytes, err := json.MarshalIndent(response, "", "  ")
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err)), nil
 	}
 
-	if result.Successful {
-		return mcp.NewToolResultText(string(jsonBytes)), nil
-	} else {
-		return mcp.NewToolResultError(string(jsonBytes)), nil
-	}
+	return mcp.NewToolResultText(string(jsonBytes)), nil
 }

@@ -62,14 +62,11 @@ func FormatMCPResult(result *ExecutionResult, data map[string]interface{}) (*mcp
 
 	jsonBytes, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err)), nil
+		return nil, fmt.Errorf("Error marshaling response: %v", err)
 	}
 
-	if data["success"].(bool) {
-		return mcp.NewToolResultText(string(jsonBytes)), nil
-	} else {
-		return mcp.NewToolResultError(string(jsonBytes)), nil
-	}
+	// Use the v0.29.0 API to create a result object
+	return mcp.NewToolResultText(string(jsonBytes)), nil
 }
 
 // extractFileNameFromPath extracts the filename from a path
