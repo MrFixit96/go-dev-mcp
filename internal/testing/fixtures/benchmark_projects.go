@@ -84,7 +84,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Benchmark project: %s")
+	fmt.Printf("Benchmark project: %s\n", projName)
 	
 	for i := 1; i <= 10; i++ {
 		fmt.Printf("Processing item %%d\n", i)
