@@ -1,4 +1,4 @@
-# Archived Documentation
+﻿# Archived Documentation
 
 This directory contains historical documentation that provides valuable context about the project's development but is no longer actively maintained.
 
@@ -16,7 +16,7 @@ This directory contains historical documentation that provides valuable context 
 
 Files are archived rather than deleted when they:
 - Contain historical development context
-- Document completed migration or modernization processes  
+- Document completed migration or modernization processes
 - May be useful for understanding past decisions
 - Are no longer actively maintained but have reference value
 

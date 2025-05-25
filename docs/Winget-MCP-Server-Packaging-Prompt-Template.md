@@ -1,4 +1,4 @@
-# Winget MCP Server Packaging Prompt Template
+﻿# Winget MCP Server Packaging Prompt Template
 
 Use this template when requesting Claude to create Windows package deployment files for an MCP server. This enables distribution through the Winget package manager with support for both system-wide and user-level installations.
 

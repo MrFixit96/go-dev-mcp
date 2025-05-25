@@ -1,4 +1,4 @@
-# Go Development MCP Server Testing Architecture
+﻿# Go Development MCP Server Testing Architecture
 
 This document describes the testing architecture for the Go Development MCP Server, detailing the relationships between components, test types, and execution patterns.
 
@@ -52,7 +52,7 @@ sequenceDiagram
     participant Fixture as Test Fixture
     participant Tool as Tool Implementation
     participant Strategy as Execution Strategy
-    
+
     Runner->>Suite: Run test suite
     Suite->>Suite: SetupSuite()
     Suite->>Fixture: Create test project
