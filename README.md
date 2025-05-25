@@ -166,13 +166,47 @@ To integrate with Claude Desktop, update your `claude_desktop_config.json` file:
     "go-dev": {
       "command": "C:\\path\\to\\go-dev-mcp.exe",
       "args": [],
-      "env": {},
+      "env": {
+        "GOCACHE": "%LOCALAPPDATA%\\go-build",
+        "LOCALAPPDATA": "%LOCALAPPDATA%",
+        "GOPATH": "%USERPROFILE%\\go",
+        "GOROOT": "%GOROOT%",
+        "PATH": "%PATH%",
+        "DEBUG": "*"
+      },
       "disabled": false,
       "autoApprove": []
     }
   }
 }
 ```
+
+**Environment Variables Used:**
+
+- `%LOCALAPPDATA%`: Resolves to `C:\Users\{username}\AppData\Local`
+- `%USERPROFILE%`: Resolves to `C:\Users\{username}`
+- `%GOROOT%`: Go installation directory (automatically set by Go installer)
+- `%PATH%`: System PATH for Go binary access
+
+**Alternative using Go Environment Variables:**
+
+```json
+{
+  "mcpServers": {
+    "go-dev": {
+      "command": "C:\\path\\to\\go-dev-mcp.exe",
+      "args": [],
+      "env": {
+        "DEBUG": "*"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+> **Note**: The alternative configuration relies on Go's default environment detection. Go automatically uses `%LOCALAPPDATA%\go-build` for GOCACHE and `%USERPROFILE%\go` for GOPATH when not explicitly set.
 
 ### macOS and Linux
 
