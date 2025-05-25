@@ -1,10 +1,10 @@
-# Go Development MCP Server Testing Framework
+﻿# Go Development MCP Server Testing Framework
 
 This directory contains our testing framework for the Go Development MCP Server. We use a **Go-based testing approach** as our primary testing methodology, which directly executes Go commands for more reliable and maintainable tests. The older PowerShell-based tests have been preserved in the `legacy` directory for reference purposes only but should not be used for new test development.
 
 ## Directory Structure
 
-```
+```text
 testing/
 ├── main.go            # Primary Go-based test runner for execution strategies
 ├── direct_runner.go   # Standalone direct execution strategy runner
@@ -91,14 +91,18 @@ Our testing approach simulates real-world interactions with the server, focusing
 You can run the Go-based tests directly using the Go command-line tools:
 
 ```bash
+
 # Run the main test runner with both direct and hybrid tests
+
 cd c:\Users\James\Documents\go-dev-mcp\scripts\testing
 go run main.go
 
 # Run only direct execution tests
+
 go run main.go -type=direct
 
 # Run only hybrid execution tests
+
 go run main.go -type=hybrid
 ```
 
@@ -107,11 +111,14 @@ go run main.go -type=hybrid
 For specific tests with build tags:
 
 ```bash
+
 # Run direct execution tests with the direct_runner
+
 cd c:\Users\James\Documents\go-dev-mcp\scripts\testing
 go run -tags=direct_test direct_runner.go
 
 # Run hybrid execution tests with the hybrid_runner
+
 go run -tags=hybrid_test hybrid_runner.go
 ```
 
@@ -120,24 +127,30 @@ go run -tags=hybrid_test hybrid_runner.go
 We also provide a PowerShell script to run the Go tests with additional options:
 
 ```powershell
+
 # Run Go tests with verbose output
+
 .\run_go_tests.ps1 -Verbose
 
 # Run Go tests with race detection
+
 .\run_go_tests.ps1 -Race
 
 # Run Go tests with coverage
+
 .\run_go_tests.ps1 -Cover
 ```
 
 For more advanced testing with coverage reports:
 
 ```powershell
+
 # Generate coverage report
+
 .\run_tests_with_coverage.ps1
 ```
 
-## Testing Approach
+## Legacy Testing Framework Overview
 
 Our testing approach simulates real-world interactions with the server, focusing on:
 
@@ -158,7 +171,7 @@ Our testing approach simulates real-world interactions with the server, focusing
    The hybrid execution strategy combines:
    - Project structure and dependencies from the `project_path`
    - Modified code from the `code` parameter
-   
+
    This strategy is critical for providing context-aware code execution while allowing modifications.
 
 ## Legacy PowerShell Testing
@@ -170,20 +183,26 @@ Our testing approach simulates real-world interactions with the server, focusing
 The legacy `run_tests.ps1` script provides a way to run legacy PowerShell tests by category:
 
 ```powershell
+
 # Run all tests
+
 .\legacy\run_tests.ps1 -TestType all
 
 # Run only basic tests
+
 .\legacy\run_tests.ps1 -TestType basic
 
 # Run only core tests
+
 .\legacy\run_tests.ps1 -TestType core
 
 # Run only strategy tests
+
 .\legacy\run_tests.ps1 -TestType strategies
 ```
 
 Additional parameters:
+
 - `-VerboseOutput`: Show detailed test information
 - `-KeepTestDirs`: Keep temporary test directories for inspection
 - `-ServerExecutable <path>`: Specify a custom server executable path
@@ -219,7 +238,7 @@ An end-to-end legacy test script that verifies the server works correctly across
 
 **Parameters**:
 
-- `-ServerUrl`: URL of the running server (default: "http://localhost:8080")
+- `-ServerUrl`: URL of the running server (default: "[http://localhost:8080](http://localhost:8080)")
 - `-TempDir`: Custom directory to use for test files
 - `-KeepTempFiles`: If specified, temporary files will not be deleted after the test
 - `-Verbose`: Show detailed test information
@@ -383,7 +402,7 @@ For legacy PowerShell tests:
 - Ensured all test files follow the same pattern of direct command execution
 - Simplified code structure by removing unnecessary abstractions
 - Enhanced maintainability through reduced complexity
-   
+
 ### Previous Enhancements
 
 #### Improved Test Result Tracking

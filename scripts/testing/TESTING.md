@@ -1,4 +1,4 @@
-# MCP Server Testing Framework
+﻿# MCP Server Testing Framework
 
 This document describes the testing framework for the Go Development MCP Server, including the new Go-based testing approach and the transition from the previous PowerShell-based testing.
 
@@ -50,13 +50,17 @@ The Go testing framework is built on standard Go testing patterns with additiona
 The main test runner supports both PowerShell and Go tests:
 
 ```powershell
+
 # Run all tests
+
 .\scripts\testing\run_tests.ps1 -TestType all
 
 # Run only Go tests
+
 .\scripts\testing\run_tests.ps1 -TestType go -UseGoTests -WithCoverage -WithRaceDetection
 
 # Run Go tests with coverage analysis
+
 .\scripts\testing\run_tests.ps1 -TestType go -UseGoTests -WithCoverage
 ```
 
@@ -65,16 +69,21 @@ The main test runner supports both PowerShell and Go tests:
 You can also run Go tests directly using standard Go tools:
 
 ```powershell
+
 # Run all Go tests
+
 go test ./internal/tools/...
 
 # Run tests with verbose output
+
 go test -v ./internal/tools/...
 
 # Run tests with race detection
+
 go test -race ./internal/tools/...
 
 # Run a specific test
+
 go test -v ./internal/tools/... -run TestRunToolSuite
 ```
 
@@ -93,42 +102,42 @@ New tests should follow this pattern:
 package yourpackage_test
 
 import (
-	"testing"
-	
-	"github.com/MrFixit96/go-dev-mcp/internal/testing"
-	"github.com/stretchr/testify/suite"
+    "testing"
+
+    "github.com/MrFixit96/go-dev-mcp/internal/testing"
+    "github.com/stretchr/testify/suite"
 )
 
 // YourTestSuite defines a test suite
 type YourTestSuite struct {
-	testing.BaseSuite
-	// Add suite-specific fields
+    testing.BaseSuite
+    // Add suite-specific fields
 }
 
 // SetupSuite runs before all tests in the suite
 func (s *YourTestSuite) SetupSuite() {
-	s.BaseSuite.SetupSuite()
-	// Add your setup code
+    s.BaseSuite.SetupSuite()
+    // Add your setup code
 }
 
 // TearDownSuite runs after all tests in the suite
 func (s *YourTestSuite) TearDownSuite() {
-	// Add your teardown code
-	s.BaseSuite.TearDownSuite()
+    // Add your teardown code
+    s.BaseSuite.TearDownSuite()
 }
 
 // TestYourFeature tests a specific feature
 func (s *YourTestSuite) TestYourFeature() {
-	// Enable parallel execution if appropriate
-	testing.RunParallel(s.T())
-	
-	// Your test code
-	s.Equal("expected", "actual")
+    // Enable parallel execution if appropriate
+    testing.RunParallel(s.T())
+
+    // Your test code
+    s.Equal("expected", "actual")
 }
 
 // TestYourTestSuite runs the test suite
 func TestYourTestSuite(t *testing.T) {
-	suite.Run(t, new(YourTestSuite))
+    suite.Run(t, new(YourTestSuite))
 }
 ```
 
@@ -138,22 +147,22 @@ For testing multiple similar cases:
 
 ```go
 func (s *YourTestSuite) TestMultipleCases() {
-	testCases := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{"empty input", "", ""},
-		{"normal input", "hello", "HELLO"},
-		{"special chars", "a!b@c#", "A!B@C#"},
-	}
-	
-	for _, tc := range testCases {
-		s.Run(tc.name, func() {
-			result := strings.ToUpper(tc.input)
-			s.Equal(tc.expected, result)
-		})
-	}
+    testCases := []struct {
+        name     string
+        input    string
+        expected string
+    }{
+        {"empty input", "", ""},
+        {"normal input", "hello", "HELLO"},
+        {"special chars", "a!b@c#", "A!B@C#"},
+    }
+
+    for _, tc := range testCases {
+        s.Run(tc.name, func() {
+            result := strings.ToUpper(tc.input)
+            s.Equal(tc.expected, result)
+        })
+    }
 }
 ```
 
@@ -187,6 +196,7 @@ testing.RunParallel(s.T())
 ```
 
 Tests that use RunParallel:
+
 1. Must be completely independent
 2. Should not modify global state
 3. Should use separate test directories

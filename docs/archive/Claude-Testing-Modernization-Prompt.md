@@ -1,4 +1,4 @@
-# Go Development MCP Server Testing Framework Modernization Prompt
+﻿# Go Development MCP Server Testing Framework Modernization Prompt
 
 ## Context
 
@@ -14,10 +14,10 @@ The codebase is in a transitional state with several files already updated but o
 
 - ✅ Changed package name from `testing` to `mcptesting` in:
   - `internal/testing/suite.go`
-  - `internal/testing/helpers.go` 
+  - `internal/testing/helpers.go`
   - `internal/testing/parallel.go`
 - ✅ Created utility functions for extracting arguments in `internal/tools/args.go`
-- ✅ Updated some tests to use the new argument extraction utilities 
+- ✅ Updated some tests to use the new argument extraction utilities
 - ✅ Implemented mock objects in `internal/testing/mock/tools.go`
 - ✅ Created test fixture helpers in `internal/testing/fixtures/projects.go`
 - ✅ Successfully updated the following test files:

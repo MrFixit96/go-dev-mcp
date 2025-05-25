@@ -1,4 +1,4 @@
-# Test Framework Organization Summary
+﻿# Test Framework Organization Summary
 
 ## Changes Completed
 
@@ -59,7 +59,7 @@ scripts/testing/
 ├── hybrid_runner.go         # Hybrid strategy Go runner
 ├── e2e/                     # Dedicated E2E test package
 │   └── e2e_test.go          # E2E tests in their own package
-├── integration/             # Dedicated integration test package 
+├── integration/             # Dedicated integration test package
 │   └── integration_test.go  # Integration tests in their own package
 ├── MIGRATION_STATUS.md      # Documents the overall migration progress
 ├── ORGANIZATION_SUMMARY.md  # This file - explains the directory structure

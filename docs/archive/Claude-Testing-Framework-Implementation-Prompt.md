@@ -1,4 +1,4 @@
-# Claude Sonnet 4 Thinking Model: Go MCP Server Testing Framework Implementation
+﻿# Claude Sonnet 4 Thinking Model: Go MCP Server Testing Framework Implementation
 
 ## Project Overview
 
@@ -8,7 +8,7 @@ You are working on a Go-based Model Context Protocol (MCP) server project that i
 
 Before beginning any work, you MUST:
 
-1. **Read the Migration Status Document**: 
+1. **Read the Migration Status Document**:
    - File: `c:\Users\James\Documents\go-dev-mcp\scripts\testing\MIGRATION_STATUS.md`
    - This document tracks all completed work and outstanding tasks
    - Use this as your primary reference for current state

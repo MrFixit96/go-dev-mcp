@@ -1,4 +1,4 @@
-# Getting Started with Go Development MCP Server Testing
+﻿# Getting Started with Go Development MCP Server Testing
 
 This guide provides a quick overview of how to run tests for the Go Development MCP Server.
 
@@ -77,8 +77,8 @@ Tests that specifically focus on the hybrid execution strategy and other special
 
 ### Server Connection Issues
 
-The e2e_test.ps1 script requires a running MCP server. If the server is not available, the test will 
-be skipped instead of failing. Make sure your server is running at http://localhost:8080 before running 
+The e2e_test.ps1 script requires a running MCP server. If the server is not available, the test will
+be skipped instead of failing. Make sure your server is running at http://localhost:8080 before running
 the e2e tests.
 
 ### File Locking Issues
@@ -88,7 +88,7 @@ If you encounter "file in use" errors during cleanup, the testing framework will
 2. Retry deletion multiple times
 3. Continue execution even if deletion fails
 
-If persistent file locking issues occur, restart your PowerShell session or use the `-KeepTestDirs` 
+If persistent file locking issues occur, restart your PowerShell session or use the `-KeepTestDirs`
 parameter to skip cleanup.
 
 ### Basic Tests
@@ -104,8 +104,8 @@ Tests that specifically focus on the hybrid execution strategy and other special
 ## Troubleshooting
 
 ### Server Connection Issues
-The e2e_test.ps1 script requires a running MCP server. If the server is not available, the test will 
-be skipped instead of failing. Make sure your server is running at http://localhost:8080 before running 
+The e2e_test.ps1 script requires a running MCP server. If the server is not available, the test will
+be skipped instead of failing. Make sure your server is running at http://localhost:8080 before running
 the e2e tests.
 
 ### File Locking Issues
@@ -114,7 +114,7 @@ If you encounter "file in use" errors during cleanup, the testing framework will
 2. Retry deletion multiple times
 3. Continue execution even if deletion fails
 
-If persistent file locking issues occur, restart your PowerShell session or use the `-KeepTestDirs` 
+If persistent file locking issues occur, restart your PowerShell session or use the `-KeepTestDirs`
 parameter to skip cleanup.
 
 - **Basic tests**: Simple, quick-running tests for sanity checks
