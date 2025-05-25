@@ -1,4 +1,4 @@
-# Go Development MCP Server
+﻿# Go Development MCP Server
 
 The Go Development MCP Server is a comprehensive solution for integrating Go development workflows with AI assistants like Claude Desktop or other MCP-compatible tools. It enables AI assistants to compile, test, run, and analyze Go code directly through the Model Context Protocol (MCP).
 
@@ -112,39 +112,45 @@ winget install go-dev-mcp
 brew install go-dev-mcp
 ```
 
-#### Manual Installation
+#### Manual Installation (macOS)
 
 1. Clone the repository:
-   ```
+
+   ```bash
    git clone https://github.com/MrFixit96/go-dev-mcp.git
    cd go-dev-mcp
    ```
 
 2. Build the executable:
-   ```
+
+   ```bash
    go build -o go-dev-mcp ./cmd/server
    ```
 
 3. Move the executable to a location in your PATH:
-   ```
+
+   ```bash
    sudo mv go-dev-mcp /usr/local/bin/
    ```
 
 ### Linux
 
 1. Clone the repository:
-   ```
+
+   ```bash
    git clone https://github.com/MrFixit96/go-dev-mcp.git
    cd go-dev-mcp
    ```
 
 2. Build the executable:
-   ```
+
+   ```bash
    go build -o go-dev-mcp ./cmd/server
    ```
 
 3. Move the executable to a location in your PATH:
-   ```
+
+   ```bash
    sudo mv go-dev-mcp /usr/local/bin/
    ```
 
@@ -152,7 +158,7 @@ brew install go-dev-mcp
 
 To integrate with Claude Desktop, update your `claude_desktop_config.json` file:
 
-### Windows
+### Windows Configuration
 
 ```json
 {
@@ -190,7 +196,7 @@ To integrate with Claude Desktop, update your `claude_desktop_config.json` file:
 
 All tools accept Go code directly through the `code` parameter:
 
-```
+```go
 // Use go_build to compile code
 go_build(code: "package main\n\nfunc main() {\n\tfmt.Println(\"Hello World\")\n}")
 
@@ -202,7 +208,7 @@ go_test(code: "package main", testCode: "package main\n\nimport \"testing\"\n\nf
 
 All tools now support working with existing Go project directories through the new `project_path` parameter:
 
-```
+```go
 // Compile a project
 go_build(project_path: "/path/to/your/go/project")
 

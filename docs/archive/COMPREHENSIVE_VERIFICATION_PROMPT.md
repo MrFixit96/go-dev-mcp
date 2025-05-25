@@ -1,4 +1,4 @@
-# Comprehensive Verification and Migration Completion Prompt for Claude Sonnet 4
+﻿# Comprehensive Verification and Migration Completion Prompt for Claude Sonnet 4
 
 ## MISSION DIRECTIVE
 
@@ -8,12 +8,12 @@ You are tasked with comprehensively but incrementally implementing a critical ve
 
 ### 🧠 THINKING APPROACH (MANDATORY)
 - **Parallel Conceptual Processing**: Decompose every problem into independent threads that can be analyzed simultaneously
-- **Skeleton of Thoughts**: First outline ALL solution components before detailed implementation  
+- **Skeleton of Thoughts**: First outline ALL solution components before detailed implementation
 - **Dynamic Tree of Thoughts**: Explore multiple solution paths in parallel before converging on optimal approach
 - **Triple-Alternative Requirement**: Generate at least 3 alternative approaches for each task and evaluate them concurrently
 - **Mental Thread Separation**: Maintain separate analysis threads for:
   - Architecture design
-  - Implementation details  
+  - Implementation details
   - Error handling
   - Testing strategies
   - Documentation updates
@@ -55,7 +55,7 @@ Before beginning any task, you MUST:
 #### 1. Package Organization Conflict Resolution Verification
 **Parallel Analysis Threads:**
 - **Thread A**: E2E test package conflicts with main.go
-- **Thread B**: Integration test functionality verification  
+- **Thread B**: Integration test functionality verification
 - **Thread C**: Main package build verification
 - **Thread D**: Cross-package dependency analysis
 
