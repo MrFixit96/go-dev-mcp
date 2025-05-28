@@ -13,20 +13,20 @@ import (
 )
 
 // ExecuteGoFmtTool handles the go_fmt tool execution
-func ExecuteGoFmtTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Resolve input
+func ExecuteGoFmtTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) { // Resolve input
 	input, err := ResolveInput(req)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
+	module := mcp.ParseString(req, "module", "") // For workspace module selection
+
 	// Prepare format args
 	args := []string{"fmt"}
 
-	// For project execution, add recursive flag
-	if input.Source == SourceProjectPath {
-		args = append(args, "./...")
-	} else {
+	// Handle different source types
+	switch input.Source {
+	case SourceCode:
 		// For code, we'll use "gofmt" directly as it's better for formatting individual files
 		var formattedCode string
 
@@ -46,7 +46,6 @@ func ExecuteGoFmtTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		// Run gofmt
 		cmd := exec.Command("gofmt", "-w", sourceFile)
 		cmd.Dir = tmpDir
-
 		result, err := execute(cmd)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
@@ -80,39 +79,56 @@ func ExecuteGoFmtTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		}
 
 		return mcp.NewToolResultText(string(jsonBytes)), nil
+
+	case SourceWorkspace:
+		// For workspace execution, handle module selection
+		if module != "" {
+			// Format specific module in workspace
+			args = append(args, module)
+		} else {
+			// Format all modules in workspace
+			args = append(args, "./...")
+		}
+
+	default:
+		// For project execution, add recursive flag
+		args = append(args, "./...")
 	}
-	// Execute using appropriate strategy for project path
+
+	// Execute using appropriate strategy for non-code sources
 	strategy := GetExecutionStrategy(input, args...)
 	result, err := strategy.Execute(ctx, input, args)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
 	}
 
-	// For project formatting, the output is different
-	if input.Source == SourceProjectPath {
-		// Parse the formatted files from output
-		filesFormatted := parseFormattedFiles(result.Stdout)
-
-		response := map[string]interface{}{
-			"success":        result.Successful,
-			"message":        "Project formatting completed",
-			"stdout":         result.Stdout,
-			"stderr":         result.Stderr,
-			"filesFormatted": filesFormatted,
-		}
-
-		// Add natural language metadata
-		AddNLMetadata(response, "go_fmt")
-
-		jsonBytes, err := json.MarshalIndent(response, "", "  ")
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err)), nil
-		}
-
-		return mcp.NewToolResultText(string(jsonBytes)), nil
+	response := map[string]interface{}{
+		"success":  result.Successful,
+		"message":  "Code formatted successfully",
+		"stdout":   result.Stdout,
+		"stderr":   result.Stderr,
+		"exitCode": result.ExitCode,
+		"duration": result.Duration.String(),
+		"source":   input.Source,
 	}
 
-	return mcp.NewToolResultError("Invalid execution path"), nil
+	if input.Source == SourceWorkspace {
+		response["workspacePath"] = input.WorkspacePath
+		response["workspaceModules"] = input.WorkspaceModules
+		if module != "" {
+			response["targetModule"] = module
+		}
+	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_fmt")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(string(jsonBytes)), nil
 }
 
 // parseFormattedFiles extracts information about formatted files from go fmt output

@@ -75,21 +75,23 @@ func main() {
 }
 
 // registerTools directly registers all tools with the MCP server
-func registerTools(s *server.MCPServer) {
-	// Register go_build tool
+func registerTools(s *server.MCPServer) { // Register go_build tool
 	buildTool := mcp.NewTool("go_build",
 		mcp.WithDescription("Compile Go code into executable programs."),
 		mcp.WithString("code",
 			mcp.Description("Complete Go source code to compile. Must include a main package and function.")),
 		mcp.WithString("project_path",
 			mcp.Description("Path to an existing Go project directory.")),
+		mcp.WithString("workspace_path",
+			mcp.Description("Path to a Go workspace directory (go.work file).")),
+		mcp.WithString("module",
+			mcp.Description("Specific module to build within a workspace.")),
 		mcp.WithString("outputPath",
 			mcp.Description("Path where the compiled executable should be saved.")),
 		mcp.WithString("buildTags",
 			mcp.Description("Build tags to use during compilation.")))
 
 	s.AddTool(buildTool, tools.ExecuteGoBuildTool)
-
 	// Register go_run tool
 	runTool := mcp.NewTool("go_run",
 		mcp.WithDescription("Run Go code directly."),
@@ -97,22 +99,28 @@ func registerTools(s *server.MCPServer) {
 			mcp.Description("Complete Go source code to run. Must include a main package and function.")),
 		mcp.WithString("project_path",
 			mcp.Description("Path to an existing Go project directory.")),
+		mcp.WithString("workspace_path",
+			mcp.Description("Path to a Go workspace directory (go.work file).")),
+		mcp.WithString("module",
+			mcp.Description("Specific module to run within a workspace.")),
 		mcp.WithNumber("timeoutSecs",
 			mcp.Description("Maximum execution time in seconds before the program is terminated."),
 			mcp.DefaultNumber(30)))
 
 	s.AddTool(runTool, tools.ExecuteGoRunTool)
-
 	// Register go_fmt tool
 	fmtTool := mcp.NewTool("go_fmt",
 		mcp.WithDescription("Format Go code according to standard Go formatting rules."),
 		mcp.WithString("code",
 			mcp.Description("Go source code to format.")),
 		mcp.WithString("project_path",
-			mcp.Description("Path to an existing Go project directory.")))
+			mcp.Description("Path to an existing Go project directory.")),
+		mcp.WithString("workspace_path",
+			mcp.Description("Path to a Go workspace directory (go.work file).")),
+		mcp.WithString("module",
+			mcp.Description("Specific module to format within a workspace.")))
 
 	s.AddTool(fmtTool, tools.ExecuteGoFmtTool)
-
 	// Register go_test tool
 	testTool := mcp.NewTool("go_test",
 		mcp.WithDescription("Run tests on Go code."),
@@ -122,6 +130,10 @@ func registerTools(s *server.MCPServer) {
 			mcp.Description("Go test code that contains test functions.")),
 		mcp.WithString("project_path",
 			mcp.Description("Path to an existing Go project directory.")),
+		mcp.WithString("workspace_path",
+			mcp.Description("Path to a Go workspace directory (go.work file).")),
+		mcp.WithString("module",
+			mcp.Description("Specific module to test within a workspace.")),
 		mcp.WithString("testPattern",
 			mcp.Description("Pattern to filter which tests to run.")),
 		mcp.WithBoolean("verbose",
@@ -132,7 +144,6 @@ func registerTools(s *server.MCPServer) {
 			mcp.DefaultBool(false)))
 
 	s.AddTool(testTool, tools.ExecuteGoTestTool)
-
 	// Register go_mod tool
 	modTool := mcp.NewTool("go_mod",
 		mcp.WithDescription("Manage Go module dependencies."),
@@ -142,20 +153,49 @@ func registerTools(s *server.MCPServer) {
 		mcp.WithString("modulePath",
 			mcp.Description("Module path for 'init' command.")),
 		mcp.WithString("code",
-			mcp.Description("Go source code for context.")))
+			mcp.Description("Go source code for context.")),
+		mcp.WithString("project_path",
+			mcp.Description("Path to an existing Go project directory.")),
+		mcp.WithString("workspace_path",
+			mcp.Description("Path to a Go workspace directory (go.work file).")),
+		mcp.WithString("module",
+			mcp.Description("Specific module to manage within a workspace.")))
 
 	s.AddTool(modTool, tools.ExecuteGoModTool)
-
 	// Register go_analyze tool
 	analyzeTool := mcp.NewTool("go_analyze",
 		mcp.WithDescription("Analyze Go code for potential issues using go vet."),
 		mcp.WithString("code",
 			mcp.Description("Go source code to analyze.")),
+		mcp.WithString("project_path",
+			mcp.Description("Path to an existing Go project directory.")),
+		mcp.WithString("workspace_path",
+			mcp.Description("Path to a Go workspace directory (go.work file).")),
+		mcp.WithString("module",
+			mcp.Description("Specific module to analyze within a workspace.")),
 		mcp.WithBoolean("vet",
 			mcp.Description("Run go vet analysis."),
 			mcp.DefaultBool(true)))
 
 	s.AddTool(analyzeTool, tools.ExecuteGoAnalyzeTool)
+
+	// Register go_workspace tool
+	workspaceTool := mcp.NewTool("go_workspace",
+		mcp.WithDescription("Manage Go workspaces for multi-module development."),
+		mcp.WithString("command",
+			mcp.Description("Workspace command to execute (init, use, sync, edit, vendor, info)."),
+			mcp.Required()),
+		mcp.WithString("workspace_path",
+			mcp.Description("Path to the workspace directory where go.work file is or will be created.")),
+		mcp.WithString("module_path",
+			mcp.Description("Path to a module for 'use' command, or module name for 'edit' command.")),
+		mcp.WithString("version",
+			mcp.Description("Version constraint for 'edit' command (e.g., v1.2.3, latest).")),
+		mcp.WithBoolean("recursive",
+			mcp.Description("Search for modules recursively when using 'use' command."),
+			mcp.DefaultBool(false)))
+
+	s.AddTool(workspaceTool, tools.ExecuteGoWorkspaceTool)
 
 	log.Printf("Registered comprehensive tools with MCP server")
 }

@@ -21,7 +21,7 @@ func MatchToolName(query string) *MatchScore {
 
 	// Normalize query
 	query = strings.TrimSpace(strings.ToLower(query))
-	
+
 	// Track best match
 	bestMatch := &MatchScore{
 		ToolName: "",
@@ -39,7 +39,7 @@ func MatchToolName(query string) *MatchScore {
 				Reason:   "Exact tool name match",
 			}
 		}
-		
+
 		// 2. Check aliases (exact matches)
 		for _, alias := range metadata.Aliases {
 			if strings.ToLower(alias) == query {
@@ -50,7 +50,7 @@ func MatchToolName(query string) *MatchScore {
 				}
 			}
 		}
-		
+
 		// 3. Try substring matching against tool name
 		if strings.Contains(strings.ToLower(toolName), query) {
 			score := 0.85
@@ -60,7 +60,7 @@ func MatchToolName(query string) *MatchScore {
 				bestMatch.Reason = "Tool name contains query"
 			}
 		}
-		
+
 		// 4. Check aliases with substring matching
 		for _, alias := range metadata.Aliases {
 			if strings.Contains(strings.ToLower(alias), query) {
@@ -72,7 +72,7 @@ func MatchToolName(query string) *MatchScore {
 				}
 			}
 		}
-		
+
 		// 5. Check if query contains tool name
 		if strings.Contains(query, strings.ToLower(toolName)) {
 			score := 0.75
@@ -82,7 +82,7 @@ func MatchToolName(query string) *MatchScore {
 				bestMatch.Reason = "Query contains tool name"
 			}
 		}
-		
+
 		// 6. Check if query contains any aliases
 		for _, alias := range metadata.Aliases {
 			if strings.Contains(query, strings.ToLower(alias)) {
@@ -94,7 +94,7 @@ func MatchToolName(query string) *MatchScore {
 				}
 			}
 		}
-		
+
 		// 7. Check examples with similarity scoring
 		for _, example := range metadata.Examples {
 			similarity := calculateSimilarity(query, strings.ToLower(example))
@@ -104,7 +104,7 @@ func MatchToolName(query string) *MatchScore {
 				bestMatch.Reason = "Similar to example: " + example
 			}
 		}
-		
+
 		// 8. Last resort: token overlap with tool name and description
 		tokens1 := tokenize(query)
 		tokens2 := tokenize(strings.ToLower(toolName))
@@ -115,12 +115,12 @@ func MatchToolName(query string) *MatchScore {
 			bestMatch.Reason = "Token overlap with tool name"
 		}
 	}
-	
+
 	// Only return a match if we're reasonably confident
 	if bestMatch.Score > 0.4 {
 		return bestMatch
 	}
-	
+
 	return nil
 }
 
@@ -130,16 +130,16 @@ func calculateSimilarity(s1, s2 string) float64 {
 	if s1 == s2 {
 		return 0.9
 	}
-	
+
 	// Special case for substring
 	if strings.Contains(s1, s2) || strings.Contains(s2, s1) {
 		return 0.8
 	}
-	
+
 	// Check token overlap
 	tokens1 := tokenize(s1)
 	tokens2 := tokenize(s2)
-	
+
 	return calculateTokenOverlap(tokens1, tokens2) * 0.7
 }
 
@@ -149,12 +149,12 @@ func tokenize(s string) []string {
 	tokens := strings.FieldsFunc(s, func(r rune) bool {
 		return unicode.IsSpace(r) || unicode.IsPunct(r)
 	})
-	
+
 	// Convert to lowercase
 	for i, token := range tokens {
 		tokens[i] = strings.ToLower(token)
 	}
-	
+
 	return tokens
 }
 
@@ -163,7 +163,7 @@ func calculateTokenOverlap(tokens1, tokens2 []string) float64 {
 	if len(tokens1) == 0 || len(tokens2) == 0 {
 		return 0.0
 	}
-	
+
 	// Create a map for tokens1
 	tokenMap := make(map[string]bool)
 	for _, t1 := range tokens1 {
@@ -171,7 +171,7 @@ func calculateTokenOverlap(tokens1, tokens2 []string) float64 {
 			tokenMap[t1] = true
 		}
 	}
-	
+
 	// Count matches in tokens2
 	matches := 0
 	for _, t2 := range tokens2 {
@@ -179,7 +179,7 @@ func calculateTokenOverlap(tokens1, tokens2 []string) float64 {
 			matches++
 		}
 	}
-	
+
 	// Average overlap ratio
 	return float64(matches) / float64((len(tokens1)+len(tokens2))/2)
 }

@@ -33,9 +33,9 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 			}
 		}
 	}
-
 	// Get timeout if provided using Parse method
 	timeoutSecs := mcp.ParseFloat64(req, "timeoutSecs", 30.0)
+	module := mcp.ParseString(req, "module", "") // For workspace module selection
 
 	// Create execution context with timeout
 	execCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
@@ -44,9 +44,20 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	// Prepare run args
 	args := []string{"run"}
 
-	if input.Source == SourceCode {
+	// Handle different source types
+	switch input.Source {
+	case SourceCode:
 		args = append(args, input.MainFile)
-	} else {
+	case SourceWorkspace:
+		// For workspace execution, handle module selection
+		if module != "" {
+			// Run specific module in workspace
+			args = append(args, module)
+		} else {
+			// Default to current directory in workspace
+			args = append(args, ".")
+		}
+	default:
 		args = append(args, "./...")
 	}
 

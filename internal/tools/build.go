@@ -16,10 +16,10 @@ func ExecuteGoBuildTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-
 	// Extract parameters
 	outputPath := mcp.ParseString(req, "outputPath", "")
 	buildTags := mcp.ParseString(req, "buildTags", "")
+	module := mcp.ParseString(req, "module", "") // For workspace module selection
 
 	// Prepare build args
 	args := []string{"build"}
@@ -34,10 +34,21 @@ func ExecuteGoBuildTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		args = append(args, "-o", outputPath)
 	}
 
-	// For code execution, add the main file
-	if input.Source == SourceCode {
+	// Handle different source types
+	switch input.Source {
+	case SourceCode:
+		// For code execution, add the main file
 		args = append(args, input.MainFile)
-	} else {
+	case SourceWorkspace:
+		// For workspace execution, handle module selection
+		if module != "" {
+			// Build specific module in workspace
+			args = append(args, module)
+		} else {
+			// Build all modules in workspace
+			args = append(args, "./...")
+		}
+	default:
 		// For project execution, add ./... to build all packages
 		args = append(args, "./...")
 	}
