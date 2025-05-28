@@ -10,16 +10,55 @@ The Go Development MCP Server is a comprehensive solution for integrating Go dev
 - **Go Mod**: Manage Go module dependencies (init, tidy, download, etc.)
 - **Go Format**: Format Go code according to standard conventions
 - **Go Analyze**: Analyze Go code for issues using static analysis tools
+- **Go Workspace**: Manage Go workspaces for multi-module development (NEW!)
 
 ### New in This Release
 
 - **MCP v0.29.0 Compatibility**: Updated to use the latest Model Context Protocol v0.29.0
+- **Go Workspace Support**: Complete workspace management for multi-module Go projects
 - **Project Path Support**: All tools now support working with existing Go project directories
-- **Strategy Pattern**: Flexible execution strategies for code snippets vs. project directories
+- **Workspace-Aware Execution**: All tools can operate within Go workspace context
+- **Strategy Pattern**: Flexible execution strategies for code snippets vs. project directories vs. workspaces
 - **Enhanced Response Formatting**: Better structured responses with natural language metadata
 - **Improved Error Handling**: More detailed and helpful error messages
 - **End-to-End Testing**: Comprehensive behavioral testing scripts to verify functionality
 - **Modern Testing Framework**: New Go-based testing framework with parallel test execution
+
+## Go Workspace Support
+
+The server now includes comprehensive support for Go workspaces, enabling multi-module development workflows. This feature allows you to:
+
+- **Initialize Workspaces**: Create new Go workspaces with `go work init`
+- **Manage Modules**: Add, remove, and organize modules within workspaces
+- **Unified Operations**: Run Go commands across all modules in a workspace
+- **Dependency Synchronization**: Keep dependencies consistent across modules
+- **Workspace-Aware Tools**: All existing tools (build, test, run, etc.) work seamlessly with workspaces
+
+### Workspace Commands
+
+The `go_workspace` tool provides the following subcommands:
+
+- `init`: Initialize a new Go workspace
+- `use`: Add modules to an existing workspace
+- `sync`: Synchronize workspace dependencies
+- `edit`: View and modify workspace configuration
+- `vendor`: Vendor all workspace dependencies
+- `info`: Get detailed workspace information
+
+### Workspace Integration
+
+All existing tools support workspace contexts through the `workspace_path` parameter:
+
+```json
+{
+  "tool": "go_build",
+  "arguments": {
+    "workspace_path": "/path/to/workspace",
+    "module": "specific-module",
+    "code": "package main..."
+  }
+}
+```
 
 ## Testing
 
@@ -303,3 +342,162 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [ ] Add debugging capabilities
 - [ ] Support for Go race detector
 - [ ] Improved error reporting with suggestions
+
+## Workspace Usage Examples
+
+### Basic Workspace Operations
+
+#### Creating a New Workspace
+
+```json
+{
+  "tool": "go_workspace",
+  "arguments": {
+    "command": "init",
+    "workspace_path": "/path/to/my-workspace",
+    "modules": ["./module1", "./module2"]
+  }
+}
+```
+
+#### Adding Modules to Existing Workspace
+
+```json
+{
+  "tool": "go_workspace",
+  "arguments": {
+    "command": "use",
+    "workspace_path": "/path/to/my-workspace", 
+    "modules": ["./new-module", "../external-module"]
+  }
+}
+```
+
+#### Getting Workspace Information
+
+```json
+{
+  "tool": "go_workspace",
+  "arguments": {
+    "command": "info",
+    "workspace_path": "/path/to/my-workspace"
+  }
+}
+```
+
+### Multi-Module Development Workflow
+
+#### 1. Initialize Workspace Structure
+
+```bash
+# Create workspace directory
+mkdir my-project-workspace
+cd my-project-workspace
+
+# Initialize with MCP
+{
+  "tool": "go_workspace",
+  "arguments": {
+    "command": "init",
+    "workspace_path": ".",
+    "modules": ["./api", "./client", "./shared"]
+  }
+}
+```
+
+#### 2. Build Across All Modules
+
+```json
+{
+  "tool": "go_build",
+  "arguments": {
+    "workspace_path": "/path/to/my-workspace"
+  }
+}
+```
+
+#### 3. Test Specific Module
+
+```json
+{
+  "tool": "go_test",
+  "arguments": {
+    "workspace_path": "/path/to/my-workspace",
+    "module": "api",
+    "coverage": true
+  }
+}
+```
+
+#### 4. Synchronize Dependencies
+
+```json
+{
+  "tool": "go_workspace",
+  "arguments": {
+    "command": "sync",
+    "workspace_path": "/path/to/my-workspace"
+  }
+}
+```
+
+### Advanced Workspace Features
+
+#### Workspace with Custom Code
+
+```json
+{
+  "tool": "go_run",
+  "arguments": {
+    "workspace_path": "/path/to/my-workspace",
+    "module": "api",
+    "code": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Running in workspace context\")\n}"
+  }
+}
+```
+
+#### Vendor All Dependencies
+
+```json
+{
+  "tool": "go_workspace",
+  "arguments": {
+    "command": "vendor",
+    "workspace_path": "/path/to/my-workspace"
+  }
+}
+```
+
+#### Format All Modules
+
+```json
+{
+  "tool": "go_fmt",
+  "arguments": {
+    "workspace_path": "/path/to/my-workspace"
+  }
+}
+```
+
+### Error Handling and Troubleshooting
+
+#### Common Workspace Issues
+
+1. **Missing go.work file**: Use `init` command to create workspace
+2. **Module not found**: Use `use` command to add modules
+3. **Dependency conflicts**: Use `sync` command to resolve
+4. **Build failures**: Check module-specific issues with targeted commands
+
+#### Workspace Validation
+
+```json
+{
+  "tool": "go_workspace",
+  "arguments": {
+    "command": "info",
+    "workspace_path": "/path/to/my-workspace"
+  }
+}
+```
+
+Returns detailed workspace structure and validation status.

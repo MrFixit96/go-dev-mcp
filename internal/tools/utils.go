@@ -156,6 +156,27 @@ var ToolNLMetadata = map[string]NLMetadata{
 			"check for proper error handling",
 		},
 	},
+	"go_workspace": {
+		Aliases: []string{
+			"workspace", "multi-module", "workspace management", "manage workspace",
+			"workspace operations", "workspace commands", "work with workspace",
+			"initialize workspace", "create workspace", "setup workspace",
+			"workspace initialization", "add modules to workspace", "workspace sync",
+			"synchronize workspace", "vendor workspace", "workspace vendor",
+		},
+		Examples: []string{
+			"initialize a new workspace",
+			"create a workspace with these modules",
+			"add modules to the workspace",
+			"synchronize workspace dependencies",
+			"vendor all workspace dependencies",
+			"get workspace information",
+			"setup a multi-module workspace",
+			"manage workspace modules",
+			"edit workspace configuration",
+			"show workspace status",
+		},
+	},
 }
 
 // execute runs a command and returns the execution result with better logging

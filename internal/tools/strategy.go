@@ -282,6 +282,11 @@ func (s *StrategySelector) SetCommandType(args []string) {
 // SelectStrategy returns the most appropriate execution strategy based on the input context,
 // command type, and project structure
 func (s *StrategySelector) SelectStrategy() ExecutionStrategy {
+	// If workspace path is provided, use workspace strategy
+	if s.Input.Source == SourceWorkspace {
+		return &WorkspaceExecutionStrategy{}
+	}
+
 	// If both code and project path are provided, use hybrid strategy
 	if s.Input.Source == SourceHybrid {
 		return &HybridExecutionStrategy{}
