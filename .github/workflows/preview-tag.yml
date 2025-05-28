@@ -32,5 +32,10 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git tag -a ${{ steps.preview-tag.outputs.tag }} -m "Preview release from PR #$PR_NUMBER"
-          git push origin ${{ steps.preview-tag.outputs.tag }}
+          TAG=${{ steps.preview-tag.outputs.tag }}
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping tag creation."
+          else
+            git tag -a "$TAG" -m "Preview release from PR #$PR_NUMBER"
+            git push origin "$TAG"
+          fi
