@@ -90,7 +90,7 @@ func ParseGoErrors(stderr string) []ErrorDetail {
 	}
 
 	var details []ErrorDetail
-	
+
 	// Split error message by lines
 	lines := strings.Split(stderr, "\n")
 	for _, line := range lines {
@@ -98,7 +98,7 @@ func ParseGoErrors(stderr string) []ErrorDetail {
 		if line == "" {
 			continue
 		}
-		
+
 		// Simple parsing of Go errors which typically follow the format:
 		// file.go:line:column: error description
 		parts := strings.SplitN(line, ":", 4)
@@ -107,30 +107,30 @@ func ParseGoErrors(stderr string) []ErrorDetail {
 			file := parts[0]
 			lineNum := 0
 			colNum := 0
-			
+
 			fmt.Sscanf(parts[1], "%d", &lineNum)
 			if len(parts) > 2 {
 				fmt.Sscanf(parts[2], "%d", &colNum)
 			}
-			
+
 			errorMsg := ""
 			if len(parts) > 3 {
 				errorMsg = strings.TrimSpace(parts[3])
 			} else if len(parts) > 2 {
 				errorMsg = strings.TrimSpace(parts[2])
 			}
-			
+
 			detail := ErrorDetail{
 				Type:    ErrorTypeCompilation,
 				Message: errorMsg,
 				File:    file,
 				Line:    lineNum,
 			}
-			
+
 			if colNum > 0 {
 				detail.Column = colNum
 			}
-			
+
 			// Add suggestions based on common Go errors
 			if strings.Contains(errorMsg, "undefined:") || strings.Contains(errorMsg, "undeclared name:") {
 				detail.AppendSuggestion("Check if you have imported the necessary package")
@@ -139,7 +139,7 @@ func ParseGoErrors(stderr string) []ErrorDetail {
 				detail.AppendSuggestion("Check for missing braces, parentheses, or semicolons")
 				detail.AppendSuggestion("Verify that syntax is correct according to Go language specification")
 			}
-			
+
 			details = append(details, detail)
 		} else {
 			// For error messages that don't match the expected format
@@ -149,6 +149,6 @@ func ParseGoErrors(stderr string) []ErrorDetail {
 			})
 		}
 	}
-	
+
 	return details
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -13,6 +12,12 @@ import (
 
 // ExecuteGoModTool handles the go_mod tool execution
 func ExecuteGoModTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Resolve input using the standard pattern
+	input, err := ResolveInput(req)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
 	// Extract parameters using new v0.29.0 API
 	command, ok := req.GetArguments()["command"].(string)
 	if !ok {
@@ -24,10 +29,7 @@ func ExecuteGoModTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		modulePath = path
 	}
 
-	code := ""
-	if c, ok := req.GetArguments()["code"].(string); ok {
-		code = c
-	}
+	module := mcp.ParseString(req, "module", "") // For workspace module selection
 
 	// Validate command
 	validCommands := map[string]bool{
@@ -44,21 +46,6 @@ func ExecuteGoModTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		return mcp.NewToolResultError(fmt.Sprintf("Invalid command: %s. Supported commands: init, tidy, vendor, verify, why, graph, download", command)), nil
 	}
 
-	// Create temporary directory for the operation
-	tmpDir, err := os.MkdirTemp("", "go-mod-*")
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create temp directory: %v", err)), nil
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// If code is provided, write it to a file
-	if code != "" {
-		sourceFile := filepath.Join(tmpDir, "main.go")
-		if err := os.WriteFile(sourceFile, []byte(code), 0644); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to write source code: %v", err)), nil
-		}
-	}
-
 	// Prepare command arguments
 	args := []string{"mod", command}
 
@@ -67,23 +54,40 @@ func ExecuteGoModTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		args = append(args, modulePath)
 	}
 
-	cmd := exec.Command("go", args...)
-	cmd.Dir = tmpDir
-
-	// Execute command
-	result, err := execute(cmd)
+	// Handle workspace-specific module operations
+	if input.Source == SourceWorkspace && module != "" {
+		// For workspace operations with specific module, we need to change to that module directory
+		// This will be handled by the execution strategy
+	}
+	// Execute using appropriate strategy
+	strategy := GetExecutionStrategy(input, args...)
+	result, err := strategy.Execute(ctx, input, args)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
 	}
 
-	// For certain commands, also read the go.mod file content
+	// For certain commands, try to read go.mod content from the working directory
 	var goModContent string
 	if command == "init" || command == "tidy" {
-		modFile := filepath.Join(tmpDir, "go.mod")
-		if content, err := os.ReadFile(modFile); err == nil {
-			goModContent = string(content)
+		var modFilePath string
+		switch input.Source {
+		case SourceWorkspace:
+			if module != "" {
+				modFilePath = filepath.Join(input.WorkspacePath, module, "go.mod")
+			} else {
+				modFilePath = filepath.Join(input.WorkspacePath, "go.mod")
+			}
+		case SourceProjectPath:
+			modFilePath = filepath.Join(input.ProjectPath, "go.mod")
+		}
+
+		if modFilePath != "" {
+			if content, err := os.ReadFile(modFilePath); err == nil {
+				goModContent = string(content)
+			}
 		}
 	}
+
 	var message string
 	if result.Successful {
 		message = fmt.Sprintf("go mod %s succeeded", command)
@@ -98,10 +102,19 @@ func ExecuteGoModTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		"stderr":   result.Stderr,
 		"exitCode": result.ExitCode,
 		"duration": result.Duration.String(),
+		"source":   input.Source,
 	}
 
 	if goModContent != "" {
 		response["goModContent"] = goModContent
+	}
+
+	if input.Source == SourceWorkspace {
+		response["workspacePath"] = input.WorkspacePath
+		response["workspaceModules"] = input.WorkspaceModules
+		if module != "" {
+			response["targetModule"] = module
+		}
 	}
 
 	// Add natural language metadata

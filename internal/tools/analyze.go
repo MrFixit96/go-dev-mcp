@@ -13,15 +13,96 @@ import (
 
 // ExecuteGoAnalyzeTool handles the go_analyze tool execution
 func ExecuteGoAnalyzeTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Extract parameters using new v0.29.0 API
-	code, ok := req.GetArguments()["code"].(string)
-	if !ok {
-		return mcp.NewToolResultError("code must be a string"), nil
+	// Resolve input
+	input, err := ResolveInput(req)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	// Use Parse method for optional boolean parameter
 	runVet := mcp.ParseBoolean(req, "vet", true)
+	module := mcp.ParseString(req, "module", "") // For workspace module selection
 
+	// Prepare vet args
+	args := []string{"vet"}
+
+	// Handle different source types
+	switch input.Source {
+	case SourceWorkspace:
+		// For workspace execution, handle module selection
+		if module != "" {
+			// Analyze specific module in workspace
+			args = append(args, module)
+		} else {
+			// Analyze all modules in workspace
+			args = append(args, "./...")
+		}
+	case SourceCode:
+		// For code analysis, we need to use the existing temporary directory approach
+		return executeCodeAnalysis(ctx, input.Code, runVet)
+	default:
+		// For project execution, analyze all packages
+		args = append(args, "./...")
+	}
+
+	// Execute using appropriate strategy
+	strategy := GetExecutionStrategy(input, args...)
+	result, err := strategy.Execute(ctx, input, args)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Execution error: %v", err)), nil
+	}
+
+	// Process results
+	issues := []string{}
+	message := "Analysis completed"
+	success := result.Successful
+
+	if result.Stdout != "" {
+		issues = append(issues, result.Stdout)
+	}
+	if result.Stderr != "" {
+		issues = append(issues, result.Stderr)
+	}
+
+	if !success {
+		message = "Analysis found issues"
+	}
+
+	response := map[string]interface{}{
+		"success":  success,
+		"message":  message,
+		"issues":   issues,
+		"duration": result.Duration.String(),
+		"source":   input.Source,
+		"vet": map[string]interface{}{
+			"success": success,
+			"issues":  issues,
+		},
+	}
+
+	if input.Source == SourceWorkspace {
+		response["workspacePath"] = input.WorkspacePath
+		response["workspaceModules"] = input.WorkspaceModules
+		if module != "" {
+			response["targetModule"] = module
+		}
+	}
+
+	// Add natural language metadata
+	AddNLMetadata(response, "go_analyze")
+
+	jsonBytes, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err)), nil
+	}
+
+	// Even though there might be issues, the analysis tool itself succeeded
+	// So we always return a success result with the analysis data
+	return mcp.NewToolResultText(string(jsonBytes)), nil
+}
+
+// executeCodeAnalysis handles analysis for code input using temporary directory
+func executeCodeAnalysis(ctx context.Context, code string, runVet bool) (*mcp.CallToolResult, error) {
 	// Create temporary directory for the operation
 	tmpDir, err := os.MkdirTemp("", "go-analyze-*")
 	if err != nil {
@@ -72,6 +153,7 @@ func ExecuteGoAnalyzeTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		"success": success,
 		"message": message,
 		"issues":  issues,
+		"source":  SourceCode,
 		"vet": map[string]interface{}{
 			"success": success,
 			"issues":  issues,
@@ -86,7 +168,5 @@ func ExecuteGoAnalyzeTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return mcp.NewToolResultError(fmt.Sprintf("Error marshaling response: %v", err)), nil
 	}
 
-	// Even though there might be issues, the analysis tool itself succeeded
-	// So we always return a success result with the analysis data
 	return mcp.NewToolResultText(string(jsonBytes)), nil
 }

@@ -16,11 +16,11 @@ func ExecuteGoTestTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-
 	// Extract parameters
 	testPattern := mcp.ParseString(req, "testPattern", "")
 	verbose := mcp.ParseBoolean(req, "verbose", false)
 	coverage := mcp.ParseBoolean(req, "coverage", false)
+	module := mcp.ParseString(req, "module", "") // For workspace module selection
 
 	// Prepare test args
 	args := []string{"test"}
@@ -34,8 +34,21 @@ func ExecuteGoTestTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		args = append(args, "-run", testPattern)
 	}
 
-	// Always add ./... to run all tests in the directory
-	args = append(args, "./...")
+	// Handle different source types
+	switch input.Source {
+	case SourceWorkspace:
+		// For workspace execution, handle module selection
+		if module != "" {
+			// Test specific module in workspace
+			args = append(args, module)
+		} else {
+			// Test all modules in workspace
+			args = append(args, "./...")
+		}
+	default:
+		// Always add ./... to run all tests in the directory
+		args = append(args, "./...")
+	}
 	// Execute using appropriate strategy
 	strategy := GetExecutionStrategy(input, args...)
 	result, err := strategy.Execute(ctx, input, args)
