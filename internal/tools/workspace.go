@@ -52,7 +52,11 @@ func (s *WorkspaceExecutionStrategy) Execute(ctx context.Context, input InputCon
 	return execute(cmd)
 }
 
-// adaptWorkspaceExecution determines the proper working directory and command args for workspace operations
+// adaptWorkspaceExecution determines the proper working directory and command args for workspace operations.
+// It analyzes the command type and workspace structure to determine the optimal execution context.
+// For code-related commands (fmt, vet, test, build), it finds an appropriate module directory.
+// For workspace commands (work), it ensures execution from the workspace root.
+// Returns the working directory, modified arguments, and any error encountered.
 func (s *WorkspaceExecutionStrategy) adaptWorkspaceExecution(args []string, workspacePath string) (string, []string, error) {
 	if len(args) == 0 {
 		return workspacePath, args, nil
@@ -101,7 +105,11 @@ func (s *WorkspaceExecutionStrategy) adaptWorkspaceExecution(args []string, work
 	return workspacePath, args, nil
 }
 
-// isValidWorkspace checks if the given path is a valid Go workspace
+// isValidWorkspace checks if the given path is a valid Go workspace.
+// It validates workspace structure by looking for either:
+// 1. A go.work file in the directory, or
+// 2. Multiple go.mod files indicating a multi-module setup
+// Returns true if the path represents a valid workspace, false otherwise.
 func (s *WorkspaceExecutionStrategy) isValidWorkspace(path string) bool {
 	// Check for go.work file
 	goWorkPath := filepath.Join(path, "go.work")
@@ -127,12 +135,19 @@ func (s *WorkspaceExecutionStrategy) isValidWorkspace(path string) bool {
 	return moduleCount > 1
 }
 
-// GetWorkspaceModules returns the list of modules in the workspace
+// GetWorkspaceModules returns the list of modules in the workspace.
+// It delegates to detectWorkspaceModules to discover all modules within the workspace.
+// Returns a slice of module paths and any error encountered during detection.
 func (s *WorkspaceExecutionStrategy) GetWorkspaceModules(workspacePath string) ([]string, error) {
 	return detectWorkspaceModules(workspacePath)
 }
 
-// GetWorkspaceInfo provides detailed information about the workspace
+// GetWorkspaceInfo provides detailed information about the workspace.
+// It validates the workspace structure and collects comprehensive information including:
+// - Workspace path
+// - Whether a go.work file exists
+// - List of all discovered modules
+// Returns a WorkspaceInfo struct with the collected data or an error if validation fails.
 func (s *WorkspaceExecutionStrategy) GetWorkspaceInfo(workspacePath string) (*WorkspaceInfo, error) {
 	if !s.isValidWorkspace(workspacePath) {
 		return nil, fmt.Errorf("not a valid workspace: %s", workspacePath)

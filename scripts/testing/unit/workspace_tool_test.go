@@ -3,6 +3,7 @@ package unit
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +13,8 @@ import (
 )
 
 func TestExecuteGoWorkspaceTool(t *testing.T) {
+	tempDir := t.TempDir()
+
 	tests := []struct {
 		name          string
 		command       string
@@ -23,7 +26,7 @@ func TestExecuteGoWorkspaceTool(t *testing.T) {
 		{
 			name:          "missing command parameter",
 			command:       "",
-			workspacePath: "/tmp/test-workspace",
+			workspacePath: filepath.Join(tempDir, "test-workspace"),
 			expectedError: true,
 		},
 		{
@@ -35,14 +38,124 @@ func TestExecuteGoWorkspaceTool(t *testing.T) {
 		{
 			name:          "unknown command",
 			command:       "unknown",
-			workspacePath: "/tmp/test-workspace",
+			workspacePath: filepath.Join(tempDir, "test-workspace"),
 			expectedError: true,
 		},
 		{
 			name:          "workspace init success",
 			command:       "init",
-			workspacePath: "/tmp/test-workspace-init",
+			workspacePath: filepath.Join(tempDir, "test-workspace-init"),
 			expectedError: false,
+			cleanupFunc: func(path string) error {
+				return os.RemoveAll(path)
+			},
+		},
+		{
+			name:          "workspace use success",
+			command:       "use",
+			workspacePath: filepath.Join(tempDir, "test-workspace-use"),
+			expectedError: false,
+			setupFunc: func(path string) error {
+				// Create workspace first
+				if err := os.MkdirAll(path, 0755); err != nil {
+					return err
+				}
+				// Initialize workspace
+				initReq := createMockRequest(map[string]interface{}{
+					"command":        "init",
+					"workspace_path": path,
+				})
+				_, err := tools.ExecuteGoWorkspaceTool(context.Background(), initReq)
+				return err
+			},
+			cleanupFunc: func(path string) error {
+				return os.RemoveAll(path)
+			},
+		},
+		{
+			name:          "workspace sync success",
+			command:       "sync",
+			workspacePath: filepath.Join(tempDir, "test-workspace-sync"),
+			expectedError: false,
+			setupFunc: func(path string) error {
+				// Create workspace first
+				if err := os.MkdirAll(path, 0755); err != nil {
+					return err
+				}
+				// Initialize workspace
+				initReq := createMockRequest(map[string]interface{}{
+					"command":        "init",
+					"workspace_path": path,
+				})
+				_, err := tools.ExecuteGoWorkspaceTool(context.Background(), initReq)
+				return err
+			},
+			cleanupFunc: func(path string) error {
+				return os.RemoveAll(path)
+			},
+		},
+		{
+			name:          "workspace edit success",
+			command:       "edit",
+			workspacePath: filepath.Join(tempDir, "test-workspace-edit"),
+			expectedError: false,
+			setupFunc: func(path string) error {
+				// Create workspace first
+				if err := os.MkdirAll(path, 0755); err != nil {
+					return err
+				}
+				// Initialize workspace
+				initReq := createMockRequest(map[string]interface{}{
+					"command":        "init",
+					"workspace_path": path,
+				})
+				_, err := tools.ExecuteGoWorkspaceTool(context.Background(), initReq)
+				return err
+			},
+			cleanupFunc: func(path string) error {
+				return os.RemoveAll(path)
+			},
+		},
+		{
+			name:          "workspace vendor success",
+			command:       "vendor",
+			workspacePath: filepath.Join(tempDir, "test-workspace-vendor"),
+			expectedError: false,
+			setupFunc: func(path string) error {
+				// Create workspace first
+				if err := os.MkdirAll(path, 0755); err != nil {
+					return err
+				}
+				// Initialize workspace
+				initReq := createMockRequest(map[string]interface{}{
+					"command":        "init",
+					"workspace_path": path,
+				})
+				_, err := tools.ExecuteGoWorkspaceTool(context.Background(), initReq)
+				return err
+			},
+			cleanupFunc: func(path string) error {
+				return os.RemoveAll(path)
+			},
+		},
+		{
+			name:          "workspace info success",
+			command:       "info",
+			workspacePath: filepath.Join(tempDir, "test-workspace-info"),
+			expectedError: false,
+			setupFunc: func(path string) error {
+				// Create workspace first
+				if err := os.MkdirAll(path, 0755); err != nil {
+					return err
+				}
+				// Initialize workspace
+				initReq := createMockRequest(map[string]interface{}{
+					"command":        "init",
+					"workspace_path": path,
+				})
+				_, err := tools.ExecuteGoWorkspaceTool(context.Background(), initReq)
+				return err
+			},
 			cleanupFunc: func(path string) error {
 				return os.RemoveAll(path)
 			},
@@ -66,10 +179,17 @@ func TestExecuteGoWorkspaceTool(t *testing.T) {
 			}()
 
 			// Create mock request
-			req := createMockRequest(map[string]interface{}{
+			reqArgs := map[string]interface{}{
 				"command":        tt.command,
 				"workspace_path": tt.workspacePath,
-			})
+			}
+
+			// Add modules parameter for 'use' command
+			if tt.command == "use" {
+				reqArgs["modules"] = []interface{}{"./test-module"}
+			}
+
+			req := createMockRequest(reqArgs)
 
 			// Execute
 			result, err := tools.ExecuteGoWorkspaceTool(context.Background(), req)
@@ -225,6 +345,103 @@ func TestWorkspaceUseCommand(t *testing.T) {
 			t.Errorf("Use command failed: %v", result.Content)
 		}
 	}
+}
+
+// TestWorkspaceAdvancedScenarios tests complex workspace operations
+func TestWorkspaceAdvancedScenarios(t *testing.T) {
+	t.Run("workspace with multiple modules", func(t *testing.T) {
+		tempDir := t.TempDir()
+		workspacePath := filepath.Join(tempDir, "multi-module-workspace")
+
+		// Create module directories
+		module1Path := filepath.Join(tempDir, "module1")
+		module2Path := filepath.Join(tempDir, "module2")
+
+		for _, modulePath := range []string{module1Path, module2Path} {
+			if err := os.MkdirAll(modulePath, 0755); err != nil {
+				t.Fatalf("Failed to create module directory: %v", err)
+			}
+
+			// Create go.mod file
+			goModContent := fmt.Sprintf("module example.com/%s\n\ngo 1.21\n", filepath.Base(modulePath))
+			if err := os.WriteFile(filepath.Join(modulePath, "go.mod"), []byte(goModContent), 0644); err != nil {
+				t.Fatalf("Failed to create go.mod: %v", err)
+			}
+		}
+
+		// Initialize workspace
+		initReq := createMockRequest(map[string]interface{}{
+			"command":        "init",
+			"workspace_path": workspacePath,
+			"modules":        []interface{}{module1Path, module2Path},
+		})
+
+		result, err := tools.ExecuteGoWorkspaceTool(context.Background(), initReq)
+		if err != nil {
+			t.Fatalf("Failed to initialize multi-module workspace: %v", err)
+		}
+
+		if result.IsError {
+			t.Errorf("Expected success for multi-module init")
+		}
+
+		// Verify go.work file exists
+		goWorkPath := filepath.Join(workspacePath, "go.work")
+		if !fileExists(goWorkPath) {
+			t.Errorf("go.work file was not created")
+		}
+	})
+
+	t.Run("workspace error handling", func(t *testing.T) {
+		// Test operations on non-existent workspace
+		req := createMockRequest(map[string]interface{}{
+			"command":        "sync",
+			"workspace_path": "/non/existent/path",
+		})
+
+		result, err := tools.ExecuteGoWorkspaceTool(context.Background(), req)
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		if !result.IsError {
+			t.Errorf("Expected error for non-existent workspace")
+		}
+	})
+
+	t.Run("workspace use with invalid modules", func(t *testing.T) {
+		tempDir := t.TempDir()
+		workspacePath := filepath.Join(tempDir, "test-workspace")
+
+		// Initialize workspace first
+		initReq := createMockRequest(map[string]interface{}{
+			"command":        "init",
+			"workspace_path": workspacePath,
+		})
+
+		_, err := tools.ExecuteGoWorkspaceTool(context.Background(), initReq)
+		if err != nil {
+			t.Fatalf("Failed to initialize workspace: %v", err)
+		}
+
+		// Try to use non-existent modules
+		useReq := createMockRequest(map[string]interface{}{
+			"command":        "use",
+			"workspace_path": workspacePath,
+			"modules":        []interface{}{"/non/existent/module"},
+		})
+
+		result, err := tools.ExecuteGoWorkspaceTool(context.Background(), useReq)
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		// This might fail or succeed depending on Go's behavior
+		// Just ensure we don't crash
+		if result == nil {
+			t.Errorf("Expected non-nil result")
+		}
+	})
 }
 
 func createMockRequest(args map[string]interface{}) mcp.CallToolRequest {

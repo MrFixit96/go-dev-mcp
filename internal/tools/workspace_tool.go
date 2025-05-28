@@ -12,7 +12,10 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// ExecuteGoWorkspaceTool handles the go_workspace tool execution
+// ExecuteGoWorkspaceTool handles the go_workspace tool execution.
+// It processes workspace management commands including init, use, sync, edit, vendor, and info.
+// The function validates required parameters and dispatches to appropriate subcommand handlers.
+// Returns a formatted tool result with command output or error information.
 func ExecuteGoWorkspaceTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Extract command parameter
 	command := mcp.ParseString(req, "command", "")
@@ -45,7 +48,11 @@ func ExecuteGoWorkspaceTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 }
 
-// executeWorkspaceInit initializes a new Go workspace
+// executeWorkspaceInit initializes a new Go workspace.
+// It creates the workspace directory if it doesn't exist and runs 'go work init'
+// with any specified modules. The function supports both empty workspace creation
+// and initialization with predefined modules.
+// Returns a tool result with initialization status and workspace information.
 func executeWorkspaceInit(ctx context.Context, workspacePath string, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Ensure the workspace directory exists
 	if err := os.MkdirAll(workspacePath, 0755); err != nil {
@@ -69,7 +76,7 @@ func executeWorkspaceInit(ctx context.Context, workspacePath string, req mcp.Cal
 	args = append(args, modules...)
 
 	// Execute command
-	cmd := exec.Command("go", args...)
+	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = workspacePath
 
 	// Execute with timeout if set
@@ -106,7 +113,10 @@ func executeWorkspaceInit(ctx context.Context, workspacePath string, req mcp.Cal
 	return mcp.NewToolResultText(string(jsonBytes)), nil
 }
 
-// executeWorkspaceUse adds modules to an existing workspace
+// executeWorkspaceUse adds modules to an existing workspace.
+// It validates that the workspace exists and executes 'go work use' to add specified modules.
+// The function requires an existing go.work file and at least one module to add.
+// Returns a tool result with the operation status and module information.
 func executeWorkspaceUse(ctx context.Context, workspacePath string, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Check if workspace exists
 	goWorkPath := filepath.Join(workspacePath, "go.work")
@@ -135,7 +145,7 @@ func executeWorkspaceUse(ctx context.Context, workspacePath string, req mcp.Call
 	args = append(args, modules...)
 
 	// Execute command
-	cmd := exec.Command("go", args...)
+	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = workspacePath
 	result, err := execute(cmd)
 	if err != nil {
@@ -161,7 +171,10 @@ func executeWorkspaceUse(ctx context.Context, workspacePath string, req mcp.Call
 	return mcp.NewToolResultText(string(jsonBytes)), nil
 }
 
-// executeWorkspaceSync synchronizes workspace dependencies
+// executeWorkspaceSync synchronizes workspace dependencies.
+// It runs 'go work sync' to ensure all workspace modules have consistent dependency versions.
+// The function requires an existing workspace with a go.work file.
+// Returns a tool result with synchronization status and output.
 func executeWorkspaceSync(ctx context.Context, workspacePath string, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Check if workspace exists
 	goWorkPath := filepath.Join(workspacePath, "go.work")
@@ -170,7 +183,7 @@ func executeWorkspaceSync(ctx context.Context, workspacePath string, req mcp.Cal
 	}
 
 	// Execute go work sync
-	cmd := exec.Command("go", "work", "sync")
+	cmd := exec.CommandContext(ctx, "go", "work", "sync")
 	cmd.Dir = workspacePath
 	result, err := execute(cmd)
 	if err != nil {
@@ -195,7 +208,10 @@ func executeWorkspaceSync(ctx context.Context, workspacePath string, req mcp.Cal
 	return mcp.NewToolResultText(string(jsonBytes)), nil
 }
 
-// executeWorkspaceEdit opens the go.work file for editing or modifies it programmatically
+// executeWorkspaceEdit opens the go.work file for editing or modifies it programmatically.
+// It runs 'go work edit -json' to retrieve the current workspace configuration in JSON format.
+// This provides structured access to workspace settings and module configurations.
+// Returns a tool result with the workspace configuration data.
 func executeWorkspaceEdit(ctx context.Context, workspacePath string, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Check if workspace exists
 	goWorkPath := filepath.Join(workspacePath, "go.work")
@@ -204,7 +220,7 @@ func executeWorkspaceEdit(ctx context.Context, workspacePath string, req mcp.Cal
 	}
 
 	// For now, just execute go work edit command
-	cmd := exec.Command("go", "work", "edit", "-json")
+	cmd := exec.CommandContext(ctx, "go", "work", "edit", "-json")
 	cmd.Dir = workspacePath
 	result, err := execute(cmd)
 	if err != nil {
@@ -229,7 +245,10 @@ func executeWorkspaceEdit(ctx context.Context, workspacePath string, req mcp.Cal
 	return mcp.NewToolResultText(string(jsonBytes)), nil
 }
 
-// executeWorkspaceVendor vendors all workspace dependencies
+// executeWorkspaceVendor vendors all workspace dependencies.
+// It runs 'go work vendor' to create a vendor directory containing all dependencies
+// for all modules in the workspace. This enables offline builds and dependency isolation.
+// Returns a tool result with vendoring status and operation details.
 func executeWorkspaceVendor(ctx context.Context, workspacePath string, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Check if workspace exists
 	goWorkPath := filepath.Join(workspacePath, "go.work")
@@ -238,7 +257,7 @@ func executeWorkspaceVendor(ctx context.Context, workspacePath string, req mcp.C
 	}
 
 	// Execute go work vendor
-	cmd := exec.Command("go", "work", "vendor")
+	cmd := exec.CommandContext(ctx, "go", "work", "vendor")
 	cmd.Dir = workspacePath
 	result, err := execute(cmd)
 	if err != nil {
@@ -263,7 +282,11 @@ func executeWorkspaceVendor(ctx context.Context, workspacePath string, req mcp.C
 	return mcp.NewToolResultText(string(jsonBytes)), nil
 }
 
-// executeWorkspaceInfo provides information about the workspace
+// executeWorkspaceInfo provides information about the workspace.
+// It collects and returns comprehensive workspace information including structure,
+// module listings, and configuration details. The information is formatted as JSON
+// for easy consumption and display.
+// Returns a tool result with detailed workspace information.
 func executeWorkspaceInfo(ctx context.Context, workspacePath string, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	strategy := &WorkspaceExecutionStrategy{}
 	info, err := strategy.GetWorkspaceInfo(workspacePath)

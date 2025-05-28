@@ -177,9 +177,7 @@ func registerTools(s *server.MCPServer) { // Register go_build tool
 			mcp.Description("Run go vet analysis."),
 			mcp.DefaultBool(true)))
 
-	s.AddTool(analyzeTool, tools.ExecuteGoAnalyzeTool)
-
-	// Register go_workspace tool
+	s.AddTool(analyzeTool, tools.ExecuteGoAnalyzeTool) // Register go_workspace tool
 	workspaceTool := mcp.NewTool("go_workspace",
 		mcp.WithDescription("Manage Go workspaces for multi-module development."),
 		mcp.WithString("command",
@@ -187,8 +185,8 @@ func registerTools(s *server.MCPServer) { // Register go_build tool
 			mcp.Required()),
 		mcp.WithString("workspace_path",
 			mcp.Description("Path to the workspace directory where go.work file is or will be created.")),
-		mcp.WithString("module_path",
-			mcp.Description("Path to a module for 'use' command, or module name for 'edit' command.")),
+		mcp.WithArray("modules",
+			mcp.Description("List of module paths for 'use' command, or module names for 'edit' command.")),
 		mcp.WithString("version",
 			mcp.Description("Version constraint for 'edit' command (e.g., v1.2.3, latest).")),
 		mcp.WithBoolean("recursive",

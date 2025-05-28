@@ -102,7 +102,12 @@ func ResolveInput(req mcp.CallToolRequest) (InputContext, error) {
 	return ctx, nil
 }
 
-// detectWorkspaceModules detects and validates modules in a Go workspace
+// detectWorkspaceModules detects and validates modules in a Go workspace.
+// It searches for modules using two methods:
+// 1. If a go.work file exists, it parses the file to extract module paths
+// 2. If no go.work file exists, it walks the directory tree to find go.mod files
+// The function returns relative paths for all discovered modules.
+// Returns a slice of module paths (relative to workspace root) and any error encountered.
 func detectWorkspaceModules(workspacePath string) ([]string, error) {
 	var modules []string
 
@@ -146,7 +151,16 @@ func detectWorkspaceModules(workspacePath string) ([]string, error) {
 	return modules, nil
 }
 
-// ParseGoWorkFile parses a go.work file and returns the module paths
+// ParseGoWorkFile parses a go.work file and returns the module paths.
+// It handles both single-line use directives (use ./module) and multi-line use blocks:
+//
+//	use (
+//	    ./module1
+//	    ./module2
+//	)
+//
+// The function ignores comments and empty lines, extracting only valid module paths.
+// Returns a slice of module paths as specified in the go.work file.
 func ParseGoWorkFile(goWorkPath string) ([]string, error) {
 	content, err := os.ReadFile(goWorkPath)
 	if err != nil {
@@ -202,7 +216,11 @@ func ParseGoWorkFile(goWorkPath string) ([]string, error) {
 	return modules, nil
 }
 
-// IsWorkspace checks if a given path contains a workspace (go.work file or multiple modules)
+// IsWorkspace checks if a given path contains a workspace (go.work file or multiple modules).
+// It uses two criteria to determine if a path represents a Go workspace:
+// 1. Presence of a go.work file in the directory
+// 2. Multiple go.mod files found within the directory tree (indicating multi-module setup)
+// Returns true if either condition is met, false otherwise.
 func IsWorkspace(path string) bool {
 	// Check for go.work file
 	goWorkPath := filepath.Join(path, "go.work")
