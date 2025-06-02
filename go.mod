@@ -7,7 +7,7 @@ toolchain go1.24.2
 require (
 	github.com/mark3labs/mcp-go v0.29.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
