@@ -501,3 +501,15 @@ cd my-project-workspace
 ```
 
 Returns detailed workspace structure and validation status.
+
+## Documentation
+
+For detailed technical documentation, implementation analysis, and enhancement roadmaps, see the [`documentation/`](./documentation/) folder. This contains:
+
+- **RFC Implementation Guides**: Comprehensive roadmaps for transforming the server into an enterprise-grade platform
+- **Security Architecture**: Detailed specifications for container-based isolation and resource management
+- **Workspace Analysis**: Complete analysis of Go workspace implementation and capabilities
+- **Enhancement Planning**: Strategic planning documents for future development phases
+- **Usage Demonstrations**: Real-world examples and project demonstrations
+
+These documents represent the strategic planning and analysis journey for evolving the Go Development MCP Server from its current foundation to a comprehensive automation platform.
