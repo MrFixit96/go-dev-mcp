@@ -251,7 +251,7 @@ func (s *E2ETestSuite) TestGoAnalyze_CodeWithIssues() {
 			"issues":  expectedIssues,
 		}
 		jsonData, _ := json.Marshal(response)
-		return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Text: string(jsonData)}}}, nil
+		return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(jsonData)}}}, nil
 	})
 	// Restore default handler after this test
 	defer s.mockServer.AddToolHandler("go_analyze", mock_testing.DefaultGoAnalyzeHandler)
@@ -331,7 +331,7 @@ func (s *E2ETestSuite) TestGoBuild_ErrorHandling() { // Override the default bui
 			"stderr":  "compiler error: something went wrong",
 		}
 		jsonData, _ := json.Marshal(response)
-		return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Text: string(jsonData)}}}, nil
+		return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(jsonData)}}}, nil
 	})
 	// Restore default handler after this test
 	defer s.mockServer.AddToolHandler("go_build", mock_testing.DefaultGoBuildHandler)

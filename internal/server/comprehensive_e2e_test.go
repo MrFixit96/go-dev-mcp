@@ -53,7 +53,7 @@ func (s *E2ETestSuite) TestE2EComprehensive() {
 						"error":   "Failed to format code: missing import 'fmt'",
 					}
 					jsonData, _ := json.Marshal(response)
-					return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Text: string(jsonData)}}}, nil
+					return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(jsonData)}}}, nil
 				})
 			},
 			resetMock: true,
@@ -163,7 +163,7 @@ func main() {
 						},
 					}
 					jsonData, _ := json.Marshal(response)
-					return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Text: string(jsonData)}}}, nil
+					return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(jsonData)}}}, nil
 				})
 			},
 			resetMock: true,
@@ -224,7 +224,7 @@ func TestFailing(t *testing.T) {
 						"exitCode": 1,
 					}
 					jsonData, _ := json.Marshal(response)
-					return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Text: string(jsonData)}}}, nil
+					return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(jsonData)}}}, nil
 				})
 			},
 			resetMock: true,
@@ -271,7 +271,7 @@ func TestFailing(t *testing.T) {
 						"stderr":  "go: unknown subcommand \"invalid_command\"\nRun 'go help mod' for usage.",
 					}
 					jsonData, _ := json.Marshal(response)
-					return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Text: string(jsonData)}}}, nil
+					return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(jsonData)}}}, nil
 				})
 			},
 			resetMock: true,
@@ -306,7 +306,7 @@ func main() {
 						"vetResult": "main.go:4:2: unusedVar declared but not used",
 					}
 					jsonData, _ := json.Marshal(response)
-					return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Text: string(jsonData)}}}, nil
+					return &mcp.CallToolResult{Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(jsonData)}}}, nil
 				})
 			},
 			resetMock: true,
