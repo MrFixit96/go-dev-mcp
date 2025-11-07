@@ -122,8 +122,8 @@ func (env *TestEnvironment) CallMCPTool(toolName string, params map[string]inter
 	// Prepare request body
 	requestBody := map[string]interface{}{
 		"params": map[string]interface{}{
-			"name":  toolName,
-			"input": params,
+			"name":      toolName,
+			"arguments": params,
 		},
 	}
 

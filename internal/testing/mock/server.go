@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"time"
 
@@ -162,20 +163,13 @@ func (ms *MockServer) handleCallTool(w http.ResponseWriter, r *http.Request) {
 		// Use the registered handler with potential error handling
 		handlerResult, handlerErr := handler(req)
 		if handlerErr != nil {
-			// If we have a handler error, handle it according to configuration
+			// If handler returns an error, treat it as a server error (HTTP 500)
 			errorMsg := handlerErr.Error()
 			if toolConfig.ErrorMessage != "" {
 				errorMsg = toolConfig.ErrorMessage
 			}
-
-			errorContentMap := map[string]interface{}{
-				"success": false,
-				"message": errorMsg,
-				"error":   errorMsg,
-			}
-			errorContentBytes, _ := json.Marshal(errorContentMap)
-
-			result = mcp.NewToolResultError(string(errorContentBytes))
+			http.Error(w, fmt.Sprintf("Handler error: %s", errorMsg), http.StatusInternalServerError)
+			return
 		} else {
 			result = handlerResult
 		}
@@ -274,20 +268,65 @@ func main() { fmt.Println("formatted by mock!") }
 
 // DefaultGoBuildHandler provides a basic mock handler for go_build.
 func DefaultGoBuildHandler(req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Check for intentional error trigger
+	// Check for intentional error trigger or invalid code
 	if args, ok := req.Params.Arguments.(map[string]interface{}); ok {
-		if code, okStr := args["code"].(string); okStr && code == "error_trigger" {
-			response := map[string]interface{}{
-				"success": false,
-				"message": "Build failed due to intentional error trigger",
-				"stderr":  "mock build error",
+		if code, okStr := args["code"].(string); okStr {
+			// Check for common error patterns in code
+			hasError := false
+			errorMsg := "mock build error"
+
+			if code == "error_trigger" {
+				hasError = true
+				errorMsg = "intentional error trigger"
+			} else if strings.Contains(code, "undefinedFunction") {
+				hasError = true
+				errorMsg = "undefined function"
+			} else if strings.Contains(code, "undefined:") {
+				hasError = true
+				errorMsg = "undefined identifier"
+			} else if !strings.Contains(code, "package main") {
+				hasError = true
+				errorMsg = "missing package main"
+			} else if strings.Contains(code, "fmt.Println") && !strings.Contains(code, "import") {
+				// Using fmt without importing it
+				hasError = true
+				errorMsg = "undefined: fmt"
+			} else if strings.Contains(code, "Hello World") && !strings.Contains(code, "\"Hello World\"") {
+				// Unquoted string literal
+				hasError = true
+				errorMsg = "syntax error: unexpected name"
 			}
-			jsonData, err := json.Marshal(response)
-			if err != nil {
-				return nil, fmt.Errorf("failed to marshal go_build error response: %w", err)
+
+			if hasError {
+				response := map[string]interface{}{
+					"success": false,
+					"message": "Build failed",
+					"stderr":  errorMsg,
+				}
+				jsonData, err := json.Marshal(response)
+				if err != nil {
+					return nil, fmt.Errorf("failed to marshal go_build error response: %w", err)
+				}
+				return mcp.NewToolResultError(string(jsonData)), nil
 			}
-			return mcp.NewToolResultError(string(jsonData)), nil
 		}
+
+		// Use custom outputPath if provided
+		outputPath := "mock/output/path/executable"
+		if customOutput, ok := args["outputPath"].(string); ok && customOutput != "" {
+			outputPath = customOutput
+		}
+
+		response := map[string]interface{}{
+			"success":    true,
+			"message":    "Compilation successful",
+			"outputPath": outputPath,
+		}
+		jsonData, err := json.Marshal(response)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal go_build response: %w", err)
+		}
+		return mcp.NewToolResultText(string(jsonData)), nil
 	}
 
 	response := map[string]interface{}{
@@ -322,7 +361,7 @@ func DefaultGoTestHandler(req mcp.CallToolRequest) (*mcp.CallToolResult, error) 
 	response := map[string]interface{}{
 		"success":   true,
 		"message":   "Tests passed",
-		"output":    "ok\t_test_\t0.001s",
+		"output":    "PASS\nok\t_test_\t0.001s",
 		"coverage":  "coverage: 100.0% of statements",
 		"testStats": map[string]int{"passed": 1, "failed": 0, "skipped": 0},
 	}
@@ -335,10 +374,23 @@ func DefaultGoTestHandler(req mcp.CallToolRequest) (*mcp.CallToolResult, error) 
 
 // DefaultGoModHandler provides a basic mock handler for go_mod.
 func DefaultGoModHandler(req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	modulePath := "example.com/hello"
+	output := "go.mod updated successfully"
+
+	// Extract parameters
+	if args, ok := req.Params.Arguments.(map[string]interface{}); ok {
+		if mp, ok := args["modulePath"].(string); ok && mp != "" {
+			modulePath = mp
+		}
+		if cmd, ok := args["command"].(string); ok && cmd == "init" {
+			output = fmt.Sprintf("go: creating new go.mod: module %s", modulePath)
+		}
+	}
+
 	response := map[string]interface{}{
 		"success": true,
 		"message": "go.mod updated successfully",
-		"output":  "go: creating new go.mod: module example.com/hello",
+		"output":  output,
 	}
 	jsonData, err := json.Marshal(response)
 	if err != nil {

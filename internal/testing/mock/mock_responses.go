@@ -183,7 +183,7 @@ func GetResponseForTool(toolName string, scenario ResponseScenario, customFields
 	result := &mcp.CallToolResult{
 		Content: []mcp.Content{
 			mcp.TextContent{
-				Type: "text",
+				Type: mcp.ContentTypeText,
 				Text: string(jsonData),
 			},
 		},
@@ -214,7 +214,7 @@ func createGenericResponse(success bool, message string, customFields map[string
 	result := &mcp.CallToolResult{
 		Content: []mcp.Content{
 			mcp.TextContent{
-				Type: "text",
+				Type: mcp.ContentTypeText,
 				Text: string(jsonData),
 			},
 		},

@@ -14,7 +14,7 @@ The Go Development MCP Server is a comprehensive solution for integrating Go dev
 
 ### New in This Release
 
-- **MCP v0.29.0 Compatibility**: Updated to use the latest Model Context Protocol v0.29.0
+- **MCP v0.43.0 Compatibility**: Updated to use the latest Model Context Protocol v0.43.0 with enhanced features
 - **Go Workspace Support**: Complete workspace management for multi-module Go projects
 - **Project Path Support**: All tools now support working with existing Go project directories
 - **Workspace-Aware Execution**: All tools can operate within Go workspace context

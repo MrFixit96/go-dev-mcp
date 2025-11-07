@@ -1,5 +1,67 @@
 ﻿# Release Notes
 
+## v0.3.0 - MCP v0.43.0 Upgrade
+
+This release updates the Go Development MCP Server to be compatible with MCP v0.43.0, bringing new features and improvements from the upstream library.
+
+### Added
+
+- Support for custom HTTP headers in client requests (mcp-go v0.43.0)
+- Session management with SessionWithResourceTemplates (mcp-go v0.43.0)
+- HTTP and Stdio client Roots feature (mcp-go v0.43.0)
+- Title field in Implementation struct per MCP spec (mcp-go v0.43.0)
+- Enhanced JSON schema support via invopop/jsonschema integration
+
+### Changed
+
+- **Breaking Change**: `TextContent` struct now requires explicit `Type` field
+  - Updated from: `mcp.TextContent{Text: "..."}`
+  - Updated to: `mcp.TextContent{Type: mcp.ContentTypeText, Text: "..."}`
+- Improved content type handling with proper type constants
+- Updated all mock test handlers to use content type constants
+- Enhanced dependency tree with better JSON schema support
+
+### Fixed
+
+- Custom header handling in client requests (mcp-go v0.43.0)
+- Content type validation in tool results
+- Test infrastructure compatibility with new mcp-go API
+
+### Migration Guide
+
+If you have custom code using `TextContent`, update it as follows:
+
+```go
+// Before (v0.29.0)
+result := &mcp.CallToolResult{
+    Content: []mcp.Content{
+        mcp.TextContent{Text: "response"},
+    },
+}
+
+// After (v0.43.0)
+result := &mcp.CallToolResult{
+    Content: []mcp.Content{
+        mcp.TextContent{
+            Type: mcp.ContentTypeText,
+            Text: "response",
+        },
+    },
+}
+```
+
+### Security
+
+- All module checksums verified with `go mod verify`
+- New dependencies audited:
+  - `github.com/invopop/jsonschema@v0.13.0` - JSON Schema generation
+  - `github.com/mailru/easyjson@v0.7.7` - Fast JSON serialization
+  - `github.com/wk8/go-ordered-map/v2@v2.1.8` - Ordered map implementation
+  - `github.com/buger/jsonparser@v1.1.1` - JSON parser
+  - `github.com/bahlo/generic-list-go@v0.2.0` - Generic list utilities
+
+---
+
 ## v0.2.0 - MCP v0.29.0 Migration
 
 This release updates the Go Development MCP Server to be compatible with MCP v0.29.0, featuring improved tool result patterns and enhanced response handling.
