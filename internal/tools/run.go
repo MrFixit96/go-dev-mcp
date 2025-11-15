@@ -45,20 +45,14 @@ func ExecuteGoRunTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	args := []string{"run"}
 
 	// Handle different source types
-	switch input.Source {
-	case SourceCode:
+	if input.Source == SourceCode {
 		args = append(args, input.MainFile)
-	case SourceWorkspace:
-		// For workspace execution, handle module selection
-		if module != "" {
-			// Run specific module in workspace
-			args = append(args, module)
-		} else {
-			// Default to current directory in workspace
-			args = append(args, ".")
-		}
-	default:
-		args = append(args, "./...")
+	} else if input.Source == SourceWorkspace && module == "" {
+		// Run-specific logic: use "." instead of "./..." for workspace without module
+		args = append(args, ".")
+	} else {
+		// Use helper for other workspace/project sources
+		args = prepareWorkspaceArgs(input, module, args)
 	}
 
 	// Add command-line arguments

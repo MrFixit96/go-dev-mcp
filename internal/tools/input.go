@@ -2,6 +2,7 @@ package tools
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,14 +49,20 @@ func ResolveInput(req mcp.CallToolRequest) (InputContext, error) {
 
 	// Extract workspace_path if provided
 	if workspacePath, ok := req.GetArguments()["workspace_path"].(string); ok && workspacePath != "" {
-		ctx.WorkspacePath = workspacePath
+		// Validate and sanitize the path
+		validatedPath, err := validatePath(workspacePath)
+		if err != nil {
+			return ctx, fmt.Errorf("invalid workspace path: %v", err)
+		}
+		ctx.WorkspacePath = validatedPath
+
 		// Validate workspace path exists
-		if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
-			return ctx, fmt.Errorf("workspace path does not exist: %s", workspacePath)
+		if _, err := os.Stat(validatedPath); os.IsNotExist(err) {
+			return ctx, fmt.Errorf("workspace path does not exist: %s", validatedPath)
 		}
 
 		// Detect and validate workspace
-		modules, err := detectWorkspaceModules(workspacePath)
+		modules, err := detectWorkspaceModules(validatedPath)
 		if err != nil {
 			return ctx, fmt.Errorf("failed to detect workspace modules: %v", err)
 		}
@@ -65,10 +72,16 @@ func ResolveInput(req mcp.CallToolRequest) (InputContext, error) {
 
 	// Extract project_path if provided
 	if path, ok := req.GetArguments()["project_path"].(string); ok && path != "" {
-		ctx.ProjectPath = path
+		// Validate and sanitize the path
+		validatedPath, err := validatePath(path)
+		if err != nil {
+			return ctx, fmt.Errorf("invalid project path: %v", err)
+		}
+		ctx.ProjectPath = validatedPath
+
 		// Validate path exists
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			return ctx, fmt.Errorf("project path does not exist: %s", path)
+		if _, err := os.Stat(validatedPath); os.IsNotExist(err) {
+			return ctx, fmt.Errorf("project path does not exist: %s", validatedPath)
 		}
 
 		// If workspace_path is also provided, it takes precedence
@@ -105,33 +118,70 @@ func ResolveInput(req mcp.CallToolRequest) (InputContext, error) {
 // detectWorkspaceModules detects and validates modules in a Go workspace.
 // It searches for modules using two methods:
 // 1. If a go.work file exists, it parses the file to extract module paths
-// 2. If no go.work file exists, it walks the directory tree to find go.mod files
+// 2. If no go.work file exists, it walks the directory tree with a depth limit to find go.mod files
 // The function returns relative paths for all discovered modules.
 // Returns a slice of module paths (relative to workspace root) and any error encountered.
+// OPTIMIZED: Uses filepath.WalkDir with depth limit instead of filepath.Walk
+// This prevents scanning deep vendor/ or node_modules/ trees
 func detectWorkspaceModules(workspacePath string) ([]string, error) {
 	var modules []string
 
 	// First, look for go.work file
 	goWorkPath := filepath.Join(workspacePath, "go.work")
 	if fileExists(goWorkPath) {
-		// Parse go.work file to get module paths
+		// Parse go.work file to get module paths (no walk needed)
 		workModules, err := ParseGoWorkFile(goWorkPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse go.work file: %v", err)
 		}
 		modules = append(modules, workModules...)
 	} else {
-		// Look for go.mod files in subdirectories
-		err := filepath.Walk(workspacePath, func(path string, info os.FileInfo, err error) error {
+		// Look for go.mod files in subdirectories with depth limit
+		// WalkDir is more efficient than Walk (uses os.ReadDir internally)
+		const maxDepth = 3 // Limit depth to avoid scanning deep trees like vendor/
+		err := filepath.WalkDir(workspacePath, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
-				return nil // Skip errors, continue walking
+				// Log the error but skip the problematic path
+				log.Printf("Warning: skipping path during module detection: %v", err)
+				if d != nil && d.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
 			}
 
-			if info.Name() == "go.mod" {
+			// Calculate current depth
+			relPath, err := filepath.Rel(workspacePath, path)
+			if err != nil {
+				return nil
+			}
+			depth := 0
+			if relPath != "." {
+				depth = strings.Count(relPath, string(filepath.Separator)) + 1
+			}
+
+			// Skip directories that are too deep or commonly ignored
+			if d.IsDir() {
+				name := d.Name()
+				// Skip hidden directories, vendor, node_modules, and other common non-Go directories
+				if strings.HasPrefix(name, ".") ||
+					name == "vendor" ||
+					name == "node_modules" ||
+					name == "testdata" {
+					return filepath.SkipDir
+				}
+				// Skip if beyond max depth
+				if depth >= maxDepth {
+					return filepath.SkipDir
+				}
+			}
+
+			if !d.IsDir() && d.Name() == "go.mod" {
 				// Get relative path from workspace root
 				relPath, err := filepath.Rel(workspacePath, filepath.Dir(path))
 				if err != nil {
-					return nil // Skip this module
+					// Log warning but continue processing other modules
+					log.Printf("Warning: failed to get relative path for module at %s: %v", path, err)
+					return nil
 				}
 				if relPath == "." {
 					relPath = "./"
@@ -219,29 +269,38 @@ func ParseGoWorkFile(goWorkPath string) ([]string, error) {
 // IsWorkspace checks if a given path contains a workspace (go.work file or multiple modules).
 // It uses two criteria to determine if a path represents a Go workspace:
 // 1. Presence of a go.work file in the directory
-// 2. Multiple go.mod files found within the directory tree (indicating multi-module setup)
+// 2. Multiple go.mod files in immediate subdirectories (indicating multi-module setup)
 // Returns true if either condition is met, false otherwise.
+// OPTIMIZED: Uses os.ReadDir for single-level traversal instead of filepath.Walk
+// This changes complexity from O(all files in tree) to O(immediate subdirectories)
 func IsWorkspace(path string) bool {
-	// Check for go.work file
+	// Check for go.work file first (cheap operation)
 	goWorkPath := filepath.Join(path, "go.work")
 	if fileExists(goWorkPath) {
 		return true
 	}
 
-	// Check for multiple go.mod files
+	// Only check immediate subdirectories, not entire tree
+	// This is O(immediate subdirs) instead of O(all files in tree)
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		log.Printf("Warning: error reading directory during workspace check: %v", err)
+		return false
+	}
+
 	moduleCount := 0
-	filepath.Walk(path, func(walkPath string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
 		}
-		if info.Name() == "go.mod" {
+		// Check if this subdirectory has a go.mod
+		goModPath := filepath.Join(path, entry.Name(), "go.mod")
+		if fileExists(goModPath) {
 			moduleCount++
 			if moduleCount > 1 {
-				return fmt.Errorf("found multiple modules") // Early termination
+				return true // Early exit - found multiple modules
 			}
 		}
-		return nil
-	})
-
-	return moduleCount > 1
+	}
+	return false
 }

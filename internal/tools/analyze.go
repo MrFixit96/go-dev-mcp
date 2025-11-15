@@ -27,22 +27,12 @@ func ExecuteGoAnalyzeTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	args := []string{"vet"}
 
 	// Handle different source types
-	switch input.Source {
-	case SourceWorkspace:
-		// For workspace execution, handle module selection
-		if module != "" {
-			// Analyze specific module in workspace
-			args = append(args, module)
-		} else {
-			// Analyze all modules in workspace
-			args = append(args, "./...")
-		}
-	case SourceCode:
+	if input.Source == SourceCode {
 		// For code analysis, we need to use the existing temporary directory approach
 		return executeCodeAnalysis(ctx, input.Code, runVet)
-	default:
-		// For project execution, analyze all packages
-		args = append(args, "./...")
+	} else {
+		// Use helper for workspace/project sources
+		args = prepareWorkspaceArgs(input, module, args)
 	}
 
 	// Execute using appropriate strategy

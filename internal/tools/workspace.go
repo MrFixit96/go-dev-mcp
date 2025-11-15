@@ -3,11 +3,11 @@ package tools
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // WorkspaceExecutionStrategy handles execution of commands in Go workspaces
@@ -37,17 +37,8 @@ func (s *WorkspaceExecutionStrategy) Execute(ctx context.Context, input InputCon
 	}
 
 	// Prepare command
-	cmd := exec.Command("go", modifiedArgs...)
+	cmd := exec.CommandContext(ctx, "go", modifiedArgs...)
 	cmd.Dir = workingDir
-
-	// Execute command with timeout if set
-	if deadline, ok := ctx.Deadline(); ok {
-		timeout := time.Until(deadline)
-		execCtx, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
-		cmd = exec.CommandContext(execCtx, cmd.Path, cmd.Args[1:]...)
-		cmd.Dir = workingDir
-	}
 
 	return execute(cmd)
 }
@@ -108,31 +99,40 @@ func (s *WorkspaceExecutionStrategy) adaptWorkspaceExecution(args []string, work
 // isValidWorkspace checks if the given path is a valid Go workspace.
 // It validates workspace structure by looking for either:
 // 1. A go.work file in the directory, or
-// 2. Multiple go.mod files indicating a multi-module setup
+// 2. Multiple go.mod files in immediate subdirectories indicating a multi-module setup
 // Returns true if the path represents a valid workspace, false otherwise.
+// OPTIMIZED: Uses os.ReadDir for single-level traversal instead of filepath.Walk
+// This changes complexity from O(all files in tree) to O(immediate subdirectories)
 func (s *WorkspaceExecutionStrategy) isValidWorkspace(path string) bool {
-	// Check for go.work file
+	// Check for go.work file first (cheap operation)
 	goWorkPath := filepath.Join(path, "go.work")
 	if fileExists(goWorkPath) {
 		return true
 	}
 
-	// Check for multiple go.mod files (indicating a multi-module setup)
+	// Only check immediate subdirectories, not entire tree
+	// This is O(immediate subdirs) instead of O(all files in tree)
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		log.Printf("Warning: error reading directory during workspace validation: %v", err)
+		return false
+	}
+
 	moduleCount := 0
-	filepath.Walk(path, func(walkPath string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
 		}
-		if info.Name() == "go.mod" {
+		// Check if this subdirectory has a go.mod
+		goModPath := filepath.Join(path, entry.Name(), "go.mod")
+		if fileExists(goModPath) {
 			moduleCount++
 			if moduleCount > 1 {
-				return fmt.Errorf("found multiple modules") // Early termination
+				return true // Early exit - found multiple modules
 			}
 		}
-		return nil
-	})
-
-	return moduleCount > 1
+	}
+	return false
 }
 
 // GetWorkspaceModules returns the list of modules in the workspace.

@@ -35,22 +35,12 @@ func ExecuteGoBuildTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	}
 
 	// Handle different source types
-	switch input.Source {
-	case SourceCode:
+	if input.Source == SourceCode {
 		// For code execution, add the main file
 		args = append(args, input.MainFile)
-	case SourceWorkspace:
-		// For workspace execution, handle module selection
-		if module != "" {
-			// Build specific module in workspace
-			args = append(args, module)
-		} else {
-			// Build all modules in workspace
-			args = append(args, "./...")
-		}
-	default:
-		// For project execution, add ./... to build all packages
-		args = append(args, "./...")
+	} else {
+		// Use helper for workspace/project sources
+		args = prepareWorkspaceArgs(input, module, args)
 	}
 
 	// Execute using appropriate strategy

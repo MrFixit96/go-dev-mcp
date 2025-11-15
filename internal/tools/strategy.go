@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 )
 
 // ExecutionStrategy defines the interface for different execution strategies
@@ -56,17 +55,8 @@ func (s *CodeExecutionStrategy) Execute(ctx context.Context, input InputContext,
 	}
 
 	// Prepare command
-	cmd := exec.Command("go", args...)
+	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = tmpDir
-
-	// Execute command with timeout if set
-	if deadline, ok := ctx.Deadline(); ok {
-		timeout := time.Until(deadline)
-		execCtx, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
-		cmd = exec.CommandContext(execCtx, cmd.Path, cmd.Args[1:]...)
-		cmd.Dir = tmpDir
-	}
 
 	return execute(cmd)
 }
@@ -77,17 +67,8 @@ type ProjectExecutionStrategy struct{}
 // Execute runs commands in the project directory
 func (s *ProjectExecutionStrategy) Execute(ctx context.Context, input InputContext, args []string) (*ExecutionResult, error) {
 	// Prepare command
-	cmd := exec.Command("go", args...)
+	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = input.ProjectPath
-
-	// Execute command with timeout if set
-	if deadline, ok := ctx.Deadline(); ok {
-		timeout := time.Until(deadline)
-		execCtx, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
-		cmd = exec.CommandContext(execCtx, cmd.Path, cmd.Args[1:]...)
-		cmd.Dir = input.ProjectPath
-	}
 
 	return execute(cmd)
 }
@@ -141,17 +122,8 @@ func (s *HybridExecutionStrategy) Execute(ctx context.Context, input InputContex
 	}
 
 	// Prepare command
-	cmd := exec.Command("go", args...)
+	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = tmpDir
-
-	// Execute command with timeout if set
-	if deadline, ok := ctx.Deadline(); ok {
-		timeout := time.Until(deadline)
-		execCtx, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
-		cmd = exec.CommandContext(execCtx, cmd.Path, cmd.Args[1:]...)
-		cmd.Dir = tmpDir
-	}
 
 	return execute(cmd)
 }

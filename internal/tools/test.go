@@ -35,20 +35,8 @@ func ExecuteGoTestTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	}
 
 	// Handle different source types
-	switch input.Source {
-	case SourceWorkspace:
-		// For workspace execution, handle module selection
-		if module != "" {
-			// Test specific module in workspace
-			args = append(args, module)
-		} else {
-			// Test all modules in workspace
-			args = append(args, "./...")
-		}
-	default:
-		// Always add ./... to run all tests in the directory
-		args = append(args, "./...")
-	}
+	// Use helper for workspace/project sources
+	args = prepareWorkspaceArgs(input, module, args)
 	// Execute using appropriate strategy
 	strategy := GetExecutionStrategy(input, args...)
 	result, err := strategy.Execute(ctx, input, args)

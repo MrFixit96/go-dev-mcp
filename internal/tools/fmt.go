@@ -80,19 +80,9 @@ func ExecuteGoFmtTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 		return mcp.NewToolResultText(string(jsonBytes)), nil
 
-	case SourceWorkspace:
-		// For workspace execution, handle module selection
-		if module != "" {
-			// Format specific module in workspace
-			args = append(args, module)
-		} else {
-			// Format all modules in workspace
-			args = append(args, "./...")
-		}
-
 	default:
-		// For project execution, add recursive flag
-		args = append(args, "./...")
+		// Use helper for workspace/project sources
+		args = prepareWorkspaceArgs(input, module, args)
 	}
 
 	// Execute using appropriate strategy for non-code sources

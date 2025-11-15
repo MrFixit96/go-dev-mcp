@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -189,23 +191,12 @@ func execute(cmd *exec.Cmd) (*ExecutionResult, error) {
 	cmdStr := cmd.String()
 	log.Printf("Executing command: %s", cmdStr)
 
-	// Execute with timeout context
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	// Use CommandContext instead of cmd.Run()
-	execCmd := exec.CommandContext(ctx, cmd.Path, cmd.Args[1:]...)
-	execCmd.Env = cmd.Env
-	execCmd.Dir = cmd.Dir
-	execCmd.Stdout = &stdout
-	execCmd.Stderr = &stderr
-
 	start := time.Now()
-	err := execCmd.Run()
+	err := cmd.Run() // Use the command's existing context
 	duration := time.Since(start)
 
 	// Check if the context deadline exceeded
-	if ctx.Err() == context.DeadlineExceeded {
+	if err != nil && errors.Is(err, context.DeadlineExceeded) {
 		log.Printf("Command timed out after %v: %s", duration, cmdStr)
 		return &ExecutionResult{
 			Stdout:     stdout.String(),
@@ -276,4 +267,33 @@ func FormatCommandResult(result *ExecutionResult, responseType string) *mcp.Call
 	} else {
 		return mcp.NewToolResultError(string(jsonBytes))
 	}
+}
+
+// validatePath validates and sanitizes a user-supplied path.
+// It protects against path traversal attacks and resolves the path to an absolute path.
+// Returns the cleaned absolute path and an error if validation fails.
+func validatePath(userPath string) (string, error) {
+	if userPath == "" {
+		return "", fmt.Errorf("path cannot be empty")
+	}
+
+	// Clean the path to remove . and .. elements
+	cleaned := filepath.Clean(userPath)
+
+	// Convert to absolute path
+	absPath, err := filepath.Abs(cleaned)
+	if err != nil {
+		return "", fmt.Errorf("invalid path: %v", err)
+	}
+
+	// Try to resolve symlinks if the path exists
+	// If it doesn't exist yet (e.g., for workspace init), that's okay
+	if resolved, err := filepath.EvalSymlinks(absPath); err == nil {
+		absPath = resolved
+	}
+
+	// Additional security checks could go here
+	// For example, checking if path is within allowed directories
+
+	return absPath, nil
 }

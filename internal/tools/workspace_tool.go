@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -28,6 +27,13 @@ func ExecuteGoWorkspaceTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	if workspacePath == "" {
 		return mcp.NewToolResultError("workspace_path parameter is required"), nil
 	}
+
+	// Validate and sanitize the workspace path
+	validatedPath, err := validatePath(workspacePath)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Invalid workspace path: %v", err)), nil
+	}
+	workspacePath = validatedPath // Use validated path from here on
 
 	// Execute the appropriate workspace command
 	switch command {
@@ -79,13 +85,6 @@ func executeWorkspaceInit(ctx context.Context, workspacePath string, req mcp.Cal
 	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = workspacePath
 
-	// Execute with timeout if set
-	if deadline, ok := ctx.Deadline(); ok {
-		execCtx, cancel := context.WithTimeout(ctx, time.Until(deadline))
-		defer cancel()
-		cmd = exec.CommandContext(execCtx, cmd.Path, cmd.Args[1:]...)
-		cmd.Dir = workspacePath
-	}
 	result, err := execute(cmd)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Workspace init failed: %v", err)), nil
